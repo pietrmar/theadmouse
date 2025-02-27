@@ -1,0 +1,11 @@
+mainmenu "theadmouse"
+
+menu "theadmouse Configuration"
+
+module = THEADMOUSE
+module-str = theadmouse
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+source "Kconfig.zephyr"
