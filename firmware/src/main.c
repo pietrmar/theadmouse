@@ -1,4 +1,8 @@
+#include <zephyr/device.h>
+#include <zephyr/drivers/retained_mem.h>
 #include <zephyr/kernel.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
@@ -13,3 +17,28 @@ int main(void)
 
 	return 0;
 }
+
+static int dfureboot_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	const struct device *gpregret1 = DEVICE_DT_GET(DT_NODELABEL(gpregret1));
+
+	if (!device_is_ready(gpregret1)) {
+		shell_error(shell, "Device is not ready");
+		return -ENODEV;
+	}
+
+	#define DFU_MAGIC_UF2_RESET 0x57
+	uint8_t val = DFU_MAGIC_UF2_RESET;
+	int ret = retained_mem_write(gpregret1, 0, &val, sizeof(val));
+	if (ret < 0) {
+		shell_error(shell, "Failed to write gpregret1: %d", ret);
+		return ret;
+	}
+
+	shell_print(shell, "Rebooting into DFU mode");
+	k_msleep(100);
+	sys_reboot(SYS_REBOOT_COLD);
+
+	return 0;
+}
+SHELL_CMD_REGISTER(dfureboot, NULL, "Reboot into DFU mode (UF2 and CDC)", dfureboot_handler);
