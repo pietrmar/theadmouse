@@ -1,7 +1,9 @@
 #include <zephyr/device.h>
+#include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/retained_mem.h>
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log.h>
 
@@ -42,3 +44,27 @@ static int dfureboot_handler(const struct shell *shell, size_t argc, char **argv
 	return 0;
 }
 SHELL_CMD_REGISTER(dfureboot, NULL, "Reboot into DFU mode (UF2 and CDC)", dfureboot_handler);
+
+static int wipenvs_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	const struct flash_area *fa;
+
+	int ret = flash_area_open(FIXED_PARTITION_ID(storage_partition), &fa);
+	if (ret < 0) {
+		shell_error(shell, "Failed open settings flash area: %d", ret);
+		return ret;
+	}
+
+	ret = flash_area_erase(fa, 0, fa->fa_size);
+	if (ret < 0) {
+		shell_error(shell, "Failed to erase settings flash area: %d", ret);
+		return ret;
+	}
+
+	flash_area_close(fa);
+
+	shell_print(shell, "Erased settings flash area, rebooting");
+	k_msleep(100);
+	sys_reboot(SYS_REBOOT_COLD);
+}
+SHELL_CMD_REGISTER(wipenvs, NULL, "Wipe the NVS settings partition adn reboot", wipenvs_handler);
