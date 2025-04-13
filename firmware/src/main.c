@@ -15,6 +15,7 @@
 #include <zephyr/logging/log.h>
 
 #include "hog.h"
+#include "MadgwickAHRS/MadgwickAHRS.h"
 
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
 
@@ -110,48 +111,64 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected,
 };
 
-struct __attribute__((__packed__)) sensor_data_packet {
-	int16_t accel[3];
-	int16_t gyro[3];
-};
+static bool first_measurement = true;
+static uint64_t last_time = 0;
+static uint32_t trigger_cnt = 0;
 
-static void lsm6dsl_trigger_handler(const struct device *dev,
-				    const struct sensor_trigger *trig)
+static void lsm6dsl_trigger_handler(const struct device *dev, const struct sensor_trigger *trig)
 {
-	struct sensor_value accel_x, accel_y, accel_z;
-	struct sensor_value gyro_x, gyro_y, gyro_z;
+	struct sensor_value accel[3];
+	struct sensor_value gyro[3];
 
-	sensor_sample_fetch_chan(dev, SENSOR_CHAN_ACCEL_XYZ);
-	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_X, &accel_x);
-	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Y, &accel_y);
-	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Z, &accel_z);
+	trigger_cnt++;
 
-	sensor_sample_fetch_chan(dev, SENSOR_CHAN_GYRO_XYZ);
-	sensor_channel_get(dev, SENSOR_CHAN_GYRO_X, &gyro_x);
-	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Y, &gyro_y);
-	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Z, &gyro_z);
+	sensor_sample_fetch(dev);
+	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ, accel);
+	sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
+
+	// TODO: Make sure this works correctly with overflows and such
+	uint32_t current_time = k_cyc_to_us_near64(k_cycle_get_32());
+	double dt = (current_time - last_time) / 1000000.0;
+	last_time = current_time;
 
 
-	struct sensor_data_packet data;
-	data.accel[0] = sensor_value_to_milli(&accel_x);
-	data.accel[1] = sensor_value_to_milli(&accel_y);
-	data.accel[2] = sensor_value_to_milli(&accel_z);
-	data.gyro[0] = sensor_value_to_milli(&gyro_x);
-	data.gyro[1] = sensor_value_to_milli(&gyro_y);
-	data.gyro[2] = sensor_value_to_milli(&gyro_z);
-#if 0
-	char buffer[128];
-	snprintf(buffer, sizeof(buffer), "%lld,%lld,%lld,%lld,%lld,%lld\n",
-			sensor_value_to_milli(&accel_x),
-			sensor_value_to_milli(&accel_y),
-			sensor_value_to_milli(&accel_z),
-			sensor_value_to_milli(&gyro_x),
-			sensor_value_to_milli(&gyro_y),
-			sensor_value_to_milli(&gyro_z));
-	bt_nus_send(NULL, buffer, strlen(buffer));
-#else
-	bt_nus_send(NULL, &data, sizeof(data));
-#endif
+	// If this is the first measurement then just do nothing, we just
+	// use it to have a valid `last_time` value.
+	if (first_measurement) {
+		first_measurement = false;
+		return;
+	}
+
+	float ax = sensor_value_to_float(&accel[0]) / 9.81f;
+	float ay = sensor_value_to_float(&accel[1]) / 9.81f;
+	float az = sensor_value_to_float(&accel[2]) / 9.81f;
+
+	float gx = sensor_value_to_float(&gyro[0]);
+	float gy = sensor_value_to_float(&gyro[1]);
+	float gz = sensor_value_to_float(&gyro[2]);
+
+	sampleFreq = 1.0f / dt;
+	MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
+
+	if ((trigger_cnt % 5) == 0) {
+		// w, x, y, z
+		float q[4] = { q0, q1, q2, q3 };
+		int16_t q_fixed[4];
+		for (int i = 0; i < 4; i++) {
+			q_fixed[i] = (int16_t)(q[i] * 10000);  // scale to fit -1.0 to 1.0 as -10000 to 10000
+		}
+
+		uint8_t payload[8];
+		payload[0] = q_fixed[0] & 0xFF;
+		payload[1] = q_fixed[0] >> 8;
+		payload[2] = q_fixed[1] & 0xFF;
+		payload[3] = q_fixed[1] >> 8;
+		payload[4] = q_fixed[2] & 0xFF;
+		payload[5] = q_fixed[2] >> 8;
+		payload[6] = q_fixed[3] & 0xFF;
+		payload[7] = q_fixed[3] >> 8;
+		bt_nus_send(NULL, &payload, sizeof(payload));
+	}
 }
 
 static int lsm6dsl_init()
@@ -166,7 +183,7 @@ static int lsm6dsl_init()
 
 	// Possible values from the data-sheet:
 	//  1.6, 12.5, 26, 52, 104, 208, 416, 833, 1666, 3332, 6664
-	struct sensor_value odr_value = { 26, 0 };
+	struct sensor_value odr_value = { 104, 0 };
 
 	ret = sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr_value);
 	if (ret < 0) {
