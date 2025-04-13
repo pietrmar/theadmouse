@@ -1,5 +1,6 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/services/nus.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
@@ -24,6 +25,7 @@ static const struct bt_data le_adv[] = {
 
 static const struct bt_data le_scan_rsp[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_SRV_VAL),
 };
 
 int ble_start_adv(void)
@@ -75,7 +77,12 @@ int main(void)
 		LOG_ERR("BLE initialization failed");
 	}
 
+	int x = 0;
 	while (true) {
+		char buffer[64];
+		snprintf(buffer, sizeof(buffer), "Test %d\n", x++);
+		bt_nus_send(NULL, buffer, strlen(buffer));
+
 		hog_push_report(0, 100, 0);
 		k_msleep(1000);
 		hog_push_report(0, -100, 0);
