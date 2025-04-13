@@ -81,6 +81,14 @@ int main(void)
 	return 0;
 }
 
+static int reboot_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	shell_print(shell, "Rebooting");
+	k_msleep(100);
+	sys_reboot(SYS_REBOOT_COLD);
+}
+SHELL_CMD_REGISTER(reboot, NULL, "Perform a reboot", reboot_handler);
+
 static int dfureboot_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	const struct device *gpregret1 = DEVICE_DT_GET(DT_NODELABEL(gpregret1));
