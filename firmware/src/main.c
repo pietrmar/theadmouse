@@ -26,6 +26,11 @@ static const struct bt_data le_scan_rsp[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
+int ble_start_adv(void)
+{
+	return bt_le_adv_start(BT_LE_ADV_CONN, le_adv, ARRAY_SIZE(le_adv), le_scan_rsp, ARRAY_SIZE(le_scan_rsp));
+}
+
 int ble_init(void)
 {
 	int ret;
@@ -48,8 +53,7 @@ int ble_init(void)
 		return ret;
 	}
 
-	// TODO: Check what `BT_LE_ADV_CONN_ONE_TIME` actually does and if it's the right thing for us
-	ret = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, le_adv, ARRAY_SIZE(le_adv), le_scan_rsp, ARRAY_SIZE(le_scan_rsp));
+	ret = ble_start_adv();
 	if (ret < 0) {
 		LOG_ERR("Failed to start BLE advertisement: %d", ret);
 		return ret;
