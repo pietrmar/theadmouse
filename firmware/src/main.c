@@ -6,6 +6,7 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/retained_mem.h>
+#include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/shell/shell.h>
@@ -109,6 +110,91 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected,
 };
 
+struct __attribute__((__packed__)) sensor_data_packet {
+	int16_t accel[3];
+	int16_t gyro[3];
+};
+
+static void lsm6dsl_trigger_handler(const struct device *dev,
+				    const struct sensor_trigger *trig)
+{
+	struct sensor_value accel_x, accel_y, accel_z;
+	struct sensor_value gyro_x, gyro_y, gyro_z;
+
+	sensor_sample_fetch_chan(dev, SENSOR_CHAN_ACCEL_XYZ);
+	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_X, &accel_x);
+	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Y, &accel_y);
+	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_Z, &accel_z);
+
+	sensor_sample_fetch_chan(dev, SENSOR_CHAN_GYRO_XYZ);
+	sensor_channel_get(dev, SENSOR_CHAN_GYRO_X, &gyro_x);
+	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Y, &gyro_y);
+	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Z, &gyro_z);
+
+
+	struct sensor_data_packet data;
+	data.accel[0] = sensor_value_to_milli(&accel_x);
+	data.accel[1] = sensor_value_to_milli(&accel_y);
+	data.accel[2] = sensor_value_to_milli(&accel_z);
+	data.gyro[0] = sensor_value_to_milli(&gyro_x);
+	data.gyro[1] = sensor_value_to_milli(&gyro_y);
+	data.gyro[2] = sensor_value_to_milli(&gyro_z);
+#if 0
+	char buffer[128];
+	snprintf(buffer, sizeof(buffer), "%lld,%lld,%lld,%lld,%lld,%lld\n",
+			sensor_value_to_milli(&accel_x),
+			sensor_value_to_milli(&accel_y),
+			sensor_value_to_milli(&accel_z),
+			sensor_value_to_milli(&gyro_x),
+			sensor_value_to_milli(&gyro_y),
+			sensor_value_to_milli(&gyro_z));
+	bt_nus_send(NULL, buffer, strlen(buffer));
+#else
+	bt_nus_send(NULL, &data, sizeof(data));
+#endif
+}
+
+static int lsm6dsl_init()
+{
+	int ret;
+	const struct device *const lsm6dsl_dev = DEVICE_DT_GET_ONE(st_lsm6dsl);
+
+	if (!device_is_ready(lsm6dsl_dev)) {
+		LOG_ERR("lsm6dsl is  not ready");
+		return -ENODEV;
+	}
+
+	// Possible values from the data-sheet:
+	//  1.6, 12.5, 26, 52, 104, 208, 416, 833, 1666, 3332, 6664
+	struct sensor_value odr_value = { 26, 0 };
+
+	ret = sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr_value);
+	if (ret < 0) {
+		LOG_ERR("Failed to set accelerometer sampling frequency: %d", ret);
+		return ret;
+	}
+
+	ret = sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr_value);
+	if (ret < 0) {
+		LOG_ERR("Failed to set gyroscope sampling frequency: %d", ret);
+		return ret;
+	}
+
+
+	struct sensor_trigger trig = {
+		.type = SENSOR_TRIG_DATA_READY,
+		.chan = SENSOR_CHAN_ACCEL_XYZ,
+	};
+
+	ret = sensor_trigger_set(lsm6dsl_dev, &trig, lsm6dsl_trigger_handler);
+	if (ret < 0) {
+		LOG_ERR("Failed to set lsm6dsl trigger: %d", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 int main(void)
 {
 	int ret;
@@ -120,16 +206,20 @@ int main(void)
 		LOG_ERR("BLE initialization failed");
 	}
 
-	int x = 0;
-	while (true) {
-		char buffer[64];
-		snprintf(buffer, sizeof(buffer), "Test %d\n", x++);
-		bt_nus_send(NULL, buffer, strlen(buffer));
+	ret = lsm6dsl_init();
+	if (ret < 0) {
+		LOG_ERR("lsm6dsl initialization failed");
+	}
 
+	while (true) {
+#if 0
 		hog_push_report(0, 100, 0);
 		k_msleep(1000);
 		hog_push_report(0, -100, 0);
 		k_msleep(1000);
+#else
+		k_msleep(1000);
+#endif
 	}
 
 	return 0;
