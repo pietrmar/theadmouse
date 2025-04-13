@@ -1,5 +1,6 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/services/nus.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/device.h>
@@ -65,6 +66,48 @@ int ble_init(void)
 
 	return 0;
 }
+
+static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params)
+{
+	LOG_INF("Updated MTU is: %u", bt_gatt_get_mtu(conn));
+}
+
+static struct bt_gatt_exchange_params mtu_exchange_params = {
+	.func = mtu_exchange_cb,
+};
+
+static void connected(struct bt_conn *conn, uint8_t err)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	if (err) {
+		LOG_ERR("Failed to connect to %s, err: %s (%#04x)", addr, bt_hci_err_to_str(err), err);
+		return;
+	}
+
+	LOG_INF("MTU is: %u", bt_gatt_get_mtu(conn));
+	int ret = bt_gatt_exchange_mtu(conn, &mtu_exchange_params);
+	if (ret < 0) {
+		LOG_ERR("Failed to increase MTU: %d", ret);
+	}
+	LOG_INF("Connected to %s", addr);
+}
+
+static void disconnected(struct bt_conn *conn, uint8_t reason)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_INF("Disconnected from %s, reason: %s (%#04x)", addr, bt_hci_err_to_str(reason), reason);
+}
+
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+	.connected = connected,
+	.disconnected = disconnected,
+};
 
 int main(void)
 {
