@@ -362,6 +362,33 @@ static int lsm6dsl_sample_fetch_gyro(const struct device *dev)
 	return 0;
 }
 
+static int lsm6dsl_sample_fetch_gyro_accel(const struct device *dev)
+{
+	struct lsm6dsl_data *data = dev->data;
+	uint8_t buf[12];
+
+	if (data->hw_tf->read_data(dev, LSM6DSL_REG_OUTX_L_G,
+				   buf, sizeof(buf)) < 0) {
+		LOG_DBG("failed to read sample");
+		return -EIO;
+	}
+
+	data->gyro_sample_x = (int16_t)((uint16_t)(buf[0]) |
+				((uint16_t)(buf[1]) << 8));
+	data->gyro_sample_y = (int16_t)((uint16_t)(buf[2]) |
+				((uint16_t)(buf[3]) << 8));
+	data->gyro_sample_z = (int16_t)((uint16_t)(buf[4]) |
+				((uint16_t)(buf[5]) << 8));
+
+	data->accel_sample_x = (int16_t)((uint16_t)(buf[6]) |
+				((uint16_t)(buf[7]) << 8));
+	data->accel_sample_y = (int16_t)((uint16_t)(buf[8]) |
+				((uint16_t)(buf[9]) << 8));
+	data->accel_sample_z = (int16_t)((uint16_t)(buf[10]) |
+				((uint16_t)(buf[11]) << 8));
+	return 0;
+}
+
 #if defined(CONFIG_LSM6DSL_ENABLE_TEMP)
 static int lsm6dsl_sample_fetch_temp(const struct device *dev)
 {
@@ -450,8 +477,7 @@ static int lsm6dsl_sample_fetch(const struct device *dev,
 		break;
 #endif
 	case SENSOR_CHAN_ALL:
-		lsm6dsl_sample_fetch_accel(dev);
-		lsm6dsl_sample_fetch_gyro(dev);
+		lsm6dsl_sample_fetch_gyro_accel(dev);
 #if defined(CONFIG_LSM6DSL_ENABLE_TEMP)
 		lsm6dsl_sample_fetch_temp(dev);
 #endif
