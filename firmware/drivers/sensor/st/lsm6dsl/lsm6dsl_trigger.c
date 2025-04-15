@@ -158,11 +158,16 @@ int lsm6dsl_init_interrupt(const struct device *dev)
 #if defined(CONFIG_LSM6DSL_TRIGGER_OWN_THREAD)
 	k_sem_init(&drv_data->gpio_sem, 0, K_SEM_MAX_LIMIT);
 
-	k_thread_create(&drv_data->thread, drv_data->thread_stack,
-			CONFIG_LSM6DSL_THREAD_STACK_SIZE,
-			lsm6dsl_thread, (void *)dev,
-			NULL, NULL, K_PRIO_COOP(CONFIG_LSM6DSL_THREAD_PRIORITY),
-			0, K_NO_WAIT);
+	k_tid_t tid = k_thread_create(&drv_data->thread, drv_data->thread_stack,
+					CONFIG_LSM6DSL_THREAD_STACK_SIZE,
+					lsm6dsl_thread, (void *)dev,
+					NULL, NULL, K_PRIO_COOP(CONFIG_LSM6DSL_THREAD_PRIORITY),
+					0, K_NO_WAIT);
+
+	int ret = k_thread_name_set(tid, "lsm6dsl-trigger");
+	if (ret < 0) {
+		LOG_ERR("Could not set own thred name: %d", ret);
+	}
 #elif defined(CONFIG_LSM6DSL_TRIGGER_GLOBAL_THREAD)
 	drv_data->work.handler = lsm6dsl_work_cb;
 #endif
