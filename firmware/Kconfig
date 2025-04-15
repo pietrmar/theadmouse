@@ -44,7 +44,8 @@ source "subsys/logging/Kconfig.template.log_config"
 
 endmenu
 
-endmenu
+rsource "drivers/sensor/st/lsm6dsl/Kconfig"
 
+endmenu
 
 source "Kconfig.zephyr"

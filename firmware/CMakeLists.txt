@@ -15,3 +15,19 @@ target_sources(app PRIVATE
 		src/slot_manager.c
 		src/telemetry_uart.c
 )
+
+if(CONFIG_LSM6DSL_CUSTOM)
+	target_sources(app PRIVATE
+		drivers/sensor/st/lsm6dsl/lsm6dsl.c
+		drivers/sensor/st/lsm6dsl/lsm6dsl_i2c.c
+		drivers/sensor/st/lsm6dsl/lsm6dsl_spi.c
+	)
+
+	if (CONFIG_LSM6DSL_TRIGGER)
+		target_sources(app PRIVATE drivers/sensor/st/lsm6dsl/lsm6dsl_trigger.c)
+	endif()
+
+	if (CONFIG_LSM6DSL_SENSORHUB)
+		target_sources(app PRIVATE drivers/sensor/st/lsm6dsl/lsm6dsl_trigger.c)
+	endif()
+endif()
