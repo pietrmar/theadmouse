@@ -10,9 +10,12 @@
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/spinlock.h>
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log.h>
+
+#include <math.h>
 
 #include "hog.h"
 #include "MadgwickAHRS/MadgwickAHRS.h"
@@ -89,12 +92,21 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		return;
 	}
 
+	LOG_INF("Connected to %s", addr);
+
 	LOG_INF("MTU is: %u", bt_gatt_get_mtu(conn));
 	int ret = bt_gatt_exchange_mtu(conn, &mtu_exchange_params);
 	if (ret < 0) {
 		LOG_ERR("Failed to increase MTU: %d", ret);
 	}
-	LOG_INF("Connected to %s", addr);
+
+	// TODO: This configures the connection interval to 7.5 ms which
+	// works nicely with a 100 Hz update rate, however we should make
+	// this somehow more connfigurable
+	ret = bt_conn_le_param_update(conn, BT_LE_CONN_PARAM(6, 6, 0, 400));
+	if (ret < 0) {
+		LOG_ERR("Failed do adjust connection interval: %d", ret);
+	}
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -111,65 +123,172 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected,
 };
 
-static bool first_measurement = true;
-static uint64_t last_time = 0;
-static uint32_t trigger_cnt = 0;
+#define SENSITIVITY_YAW		800.0f
+#define SENSITIVITY_PITCH	800.0f
+
+// Possible values from the data-sheet:
+//  1.6, 12.5, 26, 52, 104, 208, 416, 833, 1666, 3332, 6664
+// NOTE: From experimentation, the fetching of the samples via
+// I2C and calulating the Madgwick filter takes roughly
+// ~800-1000 us, so 833 Hz is the sensible maximum here.
+// NOTE: Running below 416 Hz increases the gyro drift
+#define LSM6DSL_SAMPLE_RATE	416.0f
+
+// Posible values from the data-sheet in g:
+//  2, 4, 8, 16
+#define LSM6DSL_ACC_FULL_SCALE	16
+
+// Possible values from the data-sheet deg/s:
+//  125, 250, 500, 1000, 2000
+#define LSM6DSL_GYR_FULL_SCALE	2000
+
+// These will be set in lsm6dsl_init();
+static float acc_clip_limit = 0.0f;	// in ms2
+static float gyr_clip_limit = 0.0f;	// in rad/s
+
+
+struct imu_quat {
+	float q[4];
+};
+
+// TODO: Figure if we actually need a spinlock
+static struct k_spinlock quat_lock;
+static struct imu_quat last_quat = { .q = { 1.0f, 0.0f, 0.0f, 0.0f } };
+
+static int imu_set_last_quat(const struct imu_quat *q)
+{
+	k_spinlock_key_t key = k_spin_lock(&quat_lock);
+	memcpy(&last_quat, q, sizeof(last_quat));
+	k_spin_unlock(&quat_lock, key);
+	return 0;
+}
+
+static int imu_get_last_quat(struct imu_quat *q)
+{
+	k_spinlock_key_t key = k_spin_lock(&quat_lock);
+	memcpy(q, &last_quat, sizeof(*q));
+	k_spin_unlock(&quat_lock, key);
+	return 0;
+}
 
 static void lsm6dsl_trigger_handler(const struct device *dev, const struct sensor_trigger *trig)
 {
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 
-	trigger_cnt++;
-
+	// TODO: Discard the first few samples here
 	sensor_sample_fetch(dev);
 	sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ, accel);
 	sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
 
-	// TODO: Make sure this works correctly with overflows and such
-	uint32_t current_time = k_cyc_to_us_near64(k_cycle_get_32());
-	double dt = (current_time - last_time) / 1000000.0;
-	last_time = current_time;
-
-
-	// If this is the first measurement then just do nothing, we just
-	// use it to have a valid `last_time` value.
-	if (first_measurement) {
-		first_measurement = false;
-		return;
-	}
-
-	float ax = sensor_value_to_float(&accel[0]) / 9.81f;
-	float ay = sensor_value_to_float(&accel[1]) / 9.81f;
-	float az = sensor_value_to_float(&accel[2]) / 9.81f;
+	// TODO: Is there a helper to make this conversion nicely?
+	float ax = sensor_value_to_float(&accel[0]);
+	float ay = sensor_value_to_float(&accel[1]);
+	float az = sensor_value_to_float(&accel[2]);
 
 	float gx = sensor_value_to_float(&gyro[0]);
 	float gy = sensor_value_to_float(&gyro[1]);
 	float gz = sensor_value_to_float(&gyro[2]);
 
-	sampleFreq = 1.0f / dt;
+	if (fabsf(ax) >= acc_clip_limit || fabsf(ay) >= acc_clip_limit || fabsf(az) >= acc_clip_limit) {
+		LOG_WRN("Accel clipping (limit: %f): %f %f %f", (double)acc_clip_limit, (double)ax, (double)ay, (double)az);
+	}
+
+	if (fabsf(gx) >= gyr_clip_limit || fabsf(gy) >= gyr_clip_limit || fabsf(gz) >= gyr_clip_limit) {
+		LOG_WRN("Gyro clipping (limit: %f): %f %f %f", (double)gyr_clip_limit, (double)gx, (double)gy, (double)gz);
+	}
+
+	sampleFreq = LSM6DSL_SAMPLE_RATE;
 	MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
 
-	if ((trigger_cnt % 5) == 0) {
-		// w, x, y, z
-		float q[4] = { q0, q1, q2, q3 };
-		int16_t q_fixed[4];
-		for (int i = 0; i < 4; i++) {
-			q_fixed[i] = (int16_t)(q[i] * 10000);  // scale to fit -1.0 to 1.0 as -10000 to 10000
-		}
+	struct imu_quat new_quat = { .q = { q0, q1, q2, q3 } };
 
-		uint8_t payload[8];
-		payload[0] = q_fixed[0] & 0xFF;
-		payload[1] = q_fixed[0] >> 8;
-		payload[2] = q_fixed[1] & 0xFF;
-		payload[3] = q_fixed[1] >> 8;
-		payload[4] = q_fixed[2] & 0xFF;
-		payload[5] = q_fixed[2] >> 8;
-		payload[6] = q_fixed[3] & 0xFF;
-		payload[7] = q_fixed[3] >> 8;
-		bt_nus_send(NULL, &payload, sizeof(payload));
+	int ret = imu_set_last_quat(&new_quat);
+	if (ret < 0) {
+		LOG_ERR("failed to set last quaternion");
 	}
 }
+
+void nus_debug_handler(struct k_work *work)
+{
+	struct imu_quat cur_quat;
+	int ret = imu_get_last_quat(&cur_quat);
+	if (ret < 0) {
+		LOG_ERR("failed to get last quaternion");
+		return;
+	}
+
+	float *q = cur_quat.q;
+	int16_t q_fixed[4];
+	for (int i = 0; i < 4; i++) {
+		q_fixed[i] = (int16_t)(q[i] * 10000);  // scale to fit -1.0 to 1.0 as -10000 to 10000
+	}
+
+	uint8_t payload[8];
+	payload[0] = q_fixed[0] & 0xFF;
+	payload[1] = q_fixed[0] >> 8;
+	payload[2] = q_fixed[1] & 0xFF;
+	payload[3] = q_fixed[1] >> 8;
+	payload[4] = q_fixed[2] & 0xFF;
+	payload[5] = q_fixed[2] >> 8;
+	payload[6] = q_fixed[3] & 0xFF;
+	payload[7] = q_fixed[3] >> 8;
+
+	bt_nus_send(NULL, &payload, sizeof(payload));
+}
+K_WORK_DEFINE(nus_debug_work, nus_debug_handler);
+
+void nus_debug_timer_handler(struct k_timer *timer)
+{
+	k_work_submit(&nus_debug_work);
+}
+K_TIMER_DEFINE(nus_debug_timer, nus_debug_timer_handler, NULL);
+
+
+static struct imu_quat hid_last_quat = { .q = { 1.0f, 0.0f, 0.0f, 0.0f } };
+void hid_work_handler(struct k_work *work)
+{
+	float *q_last = hid_last_quat.q;
+	float q_conj[4] = { q_last[0], -q_last[1], -q_last[2], -q_last[3] };
+
+	struct imu_quat hid_cur_quat;
+	int ret = imu_get_last_quat(&hid_cur_quat);
+	if (ret < 0) {
+		LOG_ERR("failed to get last quaternion");
+		return;
+	}
+
+	float *q = hid_cur_quat.q;
+
+	float qw = q[0], qx = q[1], qy = q[2], qz = q[3];
+	float pw = q_conj[0], px = q_conj[1], py = q_conj[2], pz = q_conj[3];
+
+	float d_w = qw*pw - qx*px - qy*py - qz*pz;
+	float d_x = qw*px + qx*pw + qy*pz - qz*py;
+	float d_y = qw*py - qx*pz + qy*pw + qz*px;
+	float d_z = qw*pz + qx*py - qy*px + qz*pw;
+
+	float pitch = asinf(2.0f * (d_w * d_y - d_z * d_x));
+	float yaw   = atan2f(2.0f * (d_w * d_z + d_x * d_y), 1.0f - 2.0f * (d_y * d_y + d_z * d_z));
+
+	int8_t dx = (int8_t)(-yaw * SENSITIVITY_YAW);
+	int8_t dy = (int8_t)(pitch * SENSITIVITY_PITCH);
+
+	//LOG_INF("%d,%d", dx, dy);
+
+	if (dx || dy) {
+		hog_push_report(0, dx, dy);
+	}
+
+	memcpy(&hid_last_quat, &hid_cur_quat, sizeof(hid_last_quat));
+}
+K_WORK_DEFINE(hid_work, hid_work_handler);
+
+void hid_timer_handler(struct k_timer *timer)
+{
+	k_work_submit(&hid_work);
+}
+K_TIMER_DEFINE(hid_timer, hid_timer_handler, NULL);
 
 static int lsm6dsl_init()
 {
@@ -181,9 +300,30 @@ static int lsm6dsl_init()
 		return -ENODEV;
 	}
 
-	// Possible values from the data-sheet:
-	//  1.6, 12.5, 26, 52, 104, 208, 416, 833, 1666, 3332, 6664
-	struct sensor_value odr_value = { 104, 0 };
+	struct sensor_value accel_fs;
+	sensor_g_to_ms2(LSM6DSL_ACC_FULL_SCALE, &accel_fs);
+	ret = sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_FULL_SCALE, &accel_fs);
+	if (ret < 0) {
+		LOG_ERR("Failed to set accelerometer range: %d", ret);
+		return ret;
+	}
+	acc_clip_limit = sensor_value_to_float(&accel_fs) * 0.99f;
+
+	struct sensor_value gyro_fs;
+	sensor_degrees_to_rad(LSM6DSL_GYR_FULL_SCALE, &gyro_fs);
+	ret = sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_FULL_SCALE, &gyro_fs);
+	if (ret < 0) {
+		LOG_ERR("Failed to set gyroscope range: %d", ret);
+		return ret;
+	}
+	gyr_clip_limit = sensor_value_to_float(&gyro_fs) * 0.99f;
+
+	struct sensor_value odr_value;
+	ret = sensor_value_from_float(&odr_value, LSM6DSL_SAMPLE_RATE);
+	if (ret < 0) {
+		LOG_ERR("Failed to convert sampling frequency to sensor value: %d", ret);
+		return ret;
+	}
 
 	ret = sensor_attr_set(lsm6dsl_dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr_value);
 	if (ret < 0) {
@@ -227,6 +367,9 @@ int main(void)
 	if (ret < 0) {
 		LOG_ERR("lsm6dsl initialization failed");
 	}
+
+	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
+	k_timer_start(&nus_debug_timer, K_MSEC(0), K_MSEC(25));
 
 	while (true) {
 #if 0
