@@ -21,9 +21,17 @@ static inline void setup_irq(const struct device *dev, bool enable)
 {
 	const struct lsm6dsl_config *config = dev->config;
 
+#if 0
 	unsigned int flags = enable
 		? GPIO_INT_EDGE_TO_ACTIVE
 		: GPIO_INT_DISABLE;
+#else
+	// TODO: Instead of using level interrupts, try re-enabling
+	// `setup_irq()` quickly after calling `k_sem_give()`.
+	unsigned int flags = enable
+		? GPIO_INT_LEVEL_ACTIVE
+		: GPIO_INT_DISABLE;
+#endif
 
 	gpio_pin_interrupt_configure_dt(&config->int_gpio, flags);
 }
