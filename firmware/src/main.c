@@ -440,4 +440,4 @@ static int wipenvs_handler(const struct shell *shell, size_t argc, char **argv)
 	k_msleep(100);
 	sys_reboot(SYS_REBOOT_COLD);
 }
-SHELL_CMD_REGISTER(wipenvs, NULL, "Wipe the NVS settings partition adn reboot", wipenvs_handler);
+SHELL_CMD_REGISTER(wipenvs, NULL, "Wipe the NVS settings partition and reboot", wipenvs_handler);
