@@ -1,10 +1,8 @@
 import asyncio
 from bleak import BleakScanner, BleakClient
-import math
 import numpy as np
 import pyvista as pv
 from scipy.spatial.transform import Rotation as R
-from signal import SIGINT, SIGTERM
 import struct
 
 NUS_DEVICE_NAME = 'theadmouse'
