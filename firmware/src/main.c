@@ -286,6 +286,7 @@ K_WORK_DEFINE(hid_work, hid_work_handler);
 
 void hid_timer_handler(struct k_timer *timer)
 {
+	// TODO: Consider using a dedicated workqueue
 	k_work_submit(&hid_work);
 }
 K_TIMER_DEFINE(hid_timer, hid_timer_handler, NULL);
