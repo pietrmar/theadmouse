@@ -1,0 +1,353 @@
+(footprint "Buzzer_FUET_FST-9018_9x9mm"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "65dB Passive (Externally Driven) Piezoelectric 4kHz SMD,9x9mm Buzzer")
+	(property "Reference" "REF**"
+		(at 0 -5.327 0)
+		(layer "F.SilkS")
+		(uuid "6a3be62d-3b1f-4002-8a0a-f9beef436a1a")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "Buzzer_FUET_FST-9018_9x9mm"
+		(at 0 5.327 0)
+		(layer "F.Fab")
+		(uuid "cdcd416b-f05a-40d8-bf81-cc21be9de3f2")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "b09a3846-4b34-4c0d-8e29-ad5728eafc79")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "4896c357-bf06-4535-b33e-cc545da0c865")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(fp_line
+		(start -4.5 -4.5)
+		(end -4.5 -1.85)
+		(stroke
+			(width 0.153)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "804026a7-1a51-42ba-8d15-65c7fdbe50ce")
+	)
+	(fp_line
+		(start -4.5 -4.5)
+		(end 4.5 -4.5)
+		(stroke
+			(width 0.153)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "4bc4216c-6d3d-4b19-a4ae-129d5b1ec40d")
+	)
+	(fp_line
+		(start -4.5 1.85)
+		(end -4.5 4.5)
+		(stroke
+			(width 0.153)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "1115fa01-74b7-4d27-907f-5c6637e813ec")
+	)
+	(fp_line
+		(start -4.5 4.5)
+		(end 4.5 4.5)
+		(stroke
+			(width 0.153)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "17f78447-d6a2-49cd-8348-950a90139431")
+	)
+	(fp_line
+		(start 4.5 -4.5)
+		(end 4.5 -1.85)
+		(stroke
+			(width 0.153)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "d718a39b-583f-4dee-99ce-d8cb1495e3c5")
+	)
+	(fp_line
+		(start 4.5 4.5)
+		(end 4.5 1.85)
+		(stroke
+			(width 0.153)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "6505944b-f5e8-4637-85b3-d978a359b5f1")
+	)
+	(fp_circle
+		(center 3 -3)
+		(end 3.5 -3)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "878b2de1-e882-4813-b523-5313ee05b1e3")
+	)
+	(fp_line
+		(start -5.25 -1.95)
+		(end -5.25 1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "738f0cc4-c160-4982-befd-13bf2bdbf3df")
+	)
+	(fp_line
+		(start -5.25 1.95)
+		(end -4.75 1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "232d3427-89a0-47be-97c7-8053c2b3da4f")
+	)
+	(fp_line
+		(start -4.75 -4.75)
+		(end -4.75 -1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "68ad4adc-7230-4be4-8edf-ecda6e50c394")
+	)
+	(fp_line
+		(start -4.75 -1.95)
+		(end -5.25 -1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "2024b897-4e06-40bb-b082-5b0f1defff1f")
+	)
+	(fp_line
+		(start -4.75 1.95)
+		(end -4.75 4.75)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "bd28dfe3-3d2b-424f-9463-2ed1ce0c0dea")
+	)
+	(fp_line
+		(start -4.75 4.75)
+		(end 4.75 4.75)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "ffc59fcc-6896-4961-9c1f-399dc0a2cfc7")
+	)
+	(fp_line
+		(start 4.75 -4.75)
+		(end -4.75 -4.75)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "84459e81-a64a-486a-a5f2-6b18494bc12c")
+	)
+	(fp_line
+		(start 4.75 -4.75)
+		(end 4.75 -1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "4648efae-715f-49a5-8646-b8089ea2f205")
+	)
+	(fp_line
+		(start 4.75 -1.95)
+		(end 5.25 -1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "c1c2d6d1-897c-4027-900c-f8c1c27be6b1")
+	)
+	(fp_line
+		(start 4.75 1.95)
+		(end 4.75 4.75)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "4d9d2491-ec44-4043-bf59-1efa136b2bbe")
+	)
+	(fp_line
+		(start 5.25 -1.95)
+		(end 5.25 1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "1e8808f8-f479-4500-9c24-46b800408b2c")
+	)
+	(fp_line
+		(start 5.25 1.95)
+		(end 4.75 1.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "7f262c3a-0112-45cf-ba01-c6a82d5051b6")
+	)
+	(fp_line
+		(start -4.5 -4.5)
+		(end -4.5 -1.85)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "5501d82d-d24b-42e3-8e9a-09f6ab7f2a2a")
+	)
+	(fp_line
+		(start -4.5 1.85)
+		(end -4.5 4.55)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "a9c2bb77-51a0-4c9a-934a-fc21a3deee48")
+	)
+	(fp_line
+		(start -4.5 4.5)
+		(end 4.5 4.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "593415d5-511d-4b61-83d6-264bb9b32901")
+	)
+	(fp_line
+		(start 4.5 -4.5)
+		(end -4.5 -4.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "6fba6162-b8e7-4c82-8732-b731e445abca")
+	)
+	(fp_line
+		(start 4.5 -1.85)
+		(end 4.5 -4.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "a16c43e0-e47a-4834-a042-a0cc8bfff21e")
+	)
+	(fp_line
+		(start 4.5 4.5)
+		(end 4.5 1.85)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "d66e3e27-4604-4d63-8dc8-b5cf79aebbee")
+	)
+	(fp_circle
+		(center 3 -3)
+		(end 3.3 -2.6)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "d1d1d80e-e62c-4fa1-86ed-6413815a1467")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "4c1cc4c9-d9a1-44b8-93d5-f1ce70bcdc1e")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd roundrect
+		(at -4.2 0)
+		(size 1.6 3.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(uuid "ca3d688e-497a-4e20-9c9f-a99bd2432ede")
+	)
+	(pad "2" smd roundrect
+		(at 4.2 0)
+		(size 1.6 3.4)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(uuid "1365e4d6-307b-4c3c-80c5-d734ffcc4a12")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/3dmodels/Buzzer_FUET_FST-9018_9x9mm.wrl"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 0.3937 0.3937 0.3937)
+		)
+		(rotate
+			(xyz -0 -0 -0)
+		)
+	)
+)
