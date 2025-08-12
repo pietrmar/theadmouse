@@ -97,7 +97,7 @@ int ble_init(void)
 
 	ret = settings_load_subtree("bt");
 	if (ret < 0) {
-		LOG_ERR("Failed to load 'bt' settings subtree");
+		LOG_ERR("Failed to load 'bt' settings subtree: %d", ret);
 		return ret;
 	}
 
