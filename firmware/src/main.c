@@ -5,6 +5,7 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
+#include <zephyr/drivers/hwinfo.h>
 #include <zephyr/drivers/retained_mem.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
@@ -27,16 +28,61 @@ static const struct bt_data le_adv[] = {
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
 			BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
 			BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_SRV_VAL),
 };
 
-static const struct bt_data le_scan_rsp[] = {
+// Not `const` because we want to change the name before starting the advertisement
+static struct bt_data le_scan_rsp[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
-	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_SRV_VAL),
 };
 
 int ble_start_adv(void)
 {
+	le_scan_rsp[0].data = bt_get_name();
+	le_scan_rsp[0].data_len = strlen(bt_get_name());
+
 	return bt_le_adv_start(BT_LE_ADV_CONN, le_adv, ARRAY_SIZE(le_adv), le_scan_rsp, ARRAY_SIZE(le_scan_rsp));
+}
+
+
+static int bt_init_friendly_name(void)
+{
+	static const char *name_adjectives[32] = {
+		"brisk", "calm", "crisp", "dandy", "eager", "fuzzy", "glossy", "handy",
+		"jolly", "keen", "lively", "merry", "minty", "nimble", "plucky", "proud",
+		"quick", "quiet", "shiny", "sleek", "sly", "snappy", "snug",
+		"spicy", "spry", "stout", "sunny", "swift", "tidy", "zesty", "brave"
+	};
+
+	static const char *name_nouns[32] = {
+		"ant", "bat", "bee", "boar", "cat", "crab", "deer", "dog",
+		"duck", "fox", "frog", "goat", "gull", "hawk", "hen", "kite",
+		"lynx", "mole", "moth", "otter", "owl", "panda", "pug", "ram",
+		"seal", "shark", "swan", "toad", "wolf", "yak", "zebra"
+	};
+
+	uint8_t device_id[8];
+	ssize_t ret = hwinfo_get_device_id(device_id, ARRAY_SIZE(device_id));
+
+	if (ret != ARRAY_SIZE(device_id)) {
+		LOG_ERR("Failed to get unique device ID: %d", ret);
+		return -EIO;
+	}
+
+	char name[CONFIG_BT_DEVICE_NAME_MAX + 1];
+	const char *adjective = name_adjectives[device_id[0] % ARRAY_SIZE(name_adjectives)];
+	const char *noun = name_nouns[device_id[1] % ARRAY_SIZE(name_nouns)];
+	snprintf(name, sizeof(name), "%s-%s-%s-%x", CONFIG_BT_DEVICE_NAME, adjective, noun, device_id[3] & 0xf);
+
+	int res = bt_set_name(name);
+	if (res < 0) {
+		LOG_ERR("Failed to set BT name: %d", res);
+		return res;
+	}
+
+	LOG_INF("Device name: %s", bt_get_name());
+
+	return 0;
 }
 
 int ble_init(void)
@@ -55,6 +101,11 @@ int ble_init(void)
 		return ret;
 	}
 
+	ret = bt_init_friendly_name();
+	if (ret < 0) {
+		LOG_ERR("Failed to set friendly BT name: %d", ret);
+	}
+
 	ret = hog_init();
 	if (ret < 0) {
 		LOG_ERR("Failed to initialize HOG: %d", ret);
@@ -67,7 +118,7 @@ int ble_init(void)
 		return ret;
 	}
 
-	LOG_INF("Started BLE advertisement, device name: %s", CONFIG_BT_DEVICE_NAME);
+	LOG_INF("Started BLE advertisement, device name: %s", bt_get_name());
 
 	return 0;
 }
