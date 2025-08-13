@@ -47,20 +47,6 @@ int ble_start_adv(void)
 
 static int bt_init_friendly_name(void)
 {
-	static const char *name_adjectives[32] = {
-		"brisk", "calm", "crisp", "dandy", "eager", "fuzzy", "glossy", "handy",
-		"jolly", "keen", "lively", "merry", "minty", "nimble", "plucky", "proud",
-		"quick", "quiet", "shiny", "sleek", "sly", "snappy", "snug",
-		"spicy", "spry", "stout", "sunny", "swift", "tidy", "zesty", "brave"
-	};
-
-	static const char *name_nouns[32] = {
-		"ant", "bat", "bee", "boar", "cat", "crab", "deer", "dog",
-		"duck", "fox", "frog", "goat", "gull", "hawk", "hen", "kite",
-		"lynx", "mole", "moth", "otter", "owl", "panda", "pug", "ram",
-		"seal", "shark", "swan", "toad", "wolf", "yak", "zebra"
-	};
-
 	uint8_t device_id[8];
 	ssize_t ret = hwinfo_get_device_id(device_id, ARRAY_SIZE(device_id));
 
@@ -70,9 +56,7 @@ static int bt_init_friendly_name(void)
 	}
 
 	char name[CONFIG_BT_DEVICE_NAME_MAX + 1];
-	const char *adjective = name_adjectives[device_id[0] % ARRAY_SIZE(name_adjectives)];
-	const char *noun = name_nouns[device_id[1] % ARRAY_SIZE(name_nouns)];
-	snprintf(name, sizeof(name), "%s-%s-%s-%x", CONFIG_BT_DEVICE_NAME, adjective, noun, device_id[3] & 0xf);
+	snprintf(name, sizeof(name), "%s-%02x%02x", CONFIG_BT_DEVICE_NAME, device_id[ret-2], device_id[ret-1]);
 
 	int res = bt_set_name(name);
 	if (res < 0) {
