@@ -1,0 +1,9 @@
+board:
+  name: theadmouse
+  socs:
+  - name: nrf52840
+  revision:
+    format: letter
+    default: "A"
+    revisions:
+      - name: "A"

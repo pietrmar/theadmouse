@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) 2025 Martin Pietryka
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <nordic/nrf52840_qiaa.dtsi>
+#include <nordic/nrf52840_partition.dtsi>
+#include "theadmouse-pinctrl.dtsi"
+
+/ {
+	model = "theadmouse";
+	compatible = "mpi,theadmouse";
+};
