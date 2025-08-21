@@ -2,10 +2,10 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/services/nus.h>
-#include <zephyr/bluetooth/uuid.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/hwinfo.h>
+#include <zephyr/drivers/led.h>
 #include <zephyr/drivers/retained_mem.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
@@ -329,6 +329,7 @@ K_TIMER_DEFINE(hid_timer, hid_timer_handler, NULL);
 static int lsm6dsl_init()
 {
 	int ret;
+	// TODO: Fetch this via an alias instead
 	const struct device *const lsm6dsl_dev = DEVICE_DT_GET_ONE(st_lsm6dsl);
 
 	if (!device_is_ready(lsm6dsl_dev)) {
@@ -388,9 +389,60 @@ static int lsm6dsl_init()
 	return 0;
 }
 
+static int led_set_rgb(int r, int g, int b)
+{
+	static const struct led_dt_spec red = LED_DT_SPEC_GET(DT_ALIAS(red_pwm_led));
+	static const struct led_dt_spec green = LED_DT_SPEC_GET(DT_ALIAS(green_pwm_led));
+	static const struct led_dt_spec blue = LED_DT_SPEC_GET(DT_ALIAS(blue_pwm_led));
+
+	// TODO: Maybe don't error out, instead try best effort to set the LED colors
+	// even if some LEDs are not available.
+	if (!device_is_ready(red.dev)) {
+		LOG_ERR("Red LED device not ready");
+		return -ENODEV;
+	}
+	if (!device_is_ready(green.dev)) {
+		LOG_ERR("Green LED device not ready");
+		return -ENODEV;
+	}
+	if (!device_is_ready(blue.dev)) {
+		LOG_ERR("Blue LED device not ready");
+		return -ENODEV;
+	}
+
+	int ret;
+	ret = led_set_brightness_dt(&red, r);
+	if (ret) {
+		LOG_ERR("Seting red LED failed (%d)", ret);
+		return ret;
+	}
+
+	ret = led_set_brightness_dt(&green, g);
+	if (ret) {
+		LOG_ERR("Seting green LED failed (%d)", ret);
+		return ret;
+	}
+
+	ret = led_set_brightness_dt(&blue, b);
+	if (ret) {
+		LOG_ERR("Seting blue LED failed (%d)", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 int main(void)
 {
 	int ret;
+
+	// NOTE: It takes quite a while to arrive here, so consider
+	// turning on the green LED via some very early GPIO using
+	// `SYS_INIT()` with something like `PRE_KERNEL_1`.
+	ret = led_set_rgb(0, 10, 0);
+	if (ret < 0) {
+		LOG_ERR("Failed to set RGB LED");
+	}
 
 	LOG_INF("Tina was here ^_^");
 
@@ -408,19 +460,13 @@ int main(void)
 	k_timer_start(&nus_debug_timer, K_MSEC(0), K_MSEC(25));
 
 	while (true) {
-#if 0
-		hog_push_report(0, 100, 0);
 		k_msleep(1000);
-		hog_push_report(0, -100, 0);
-		k_msleep(1000);
-#else
-		k_msleep(1000);
-#endif
 	}
 
 	return 0;
 }
 
+#if defined(CONFIG_SHELL)
 static int reboot_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	shell_print(shell, "Rebooting");
@@ -477,3 +523,4 @@ static int wipenvs_handler(const struct shell *shell, size_t argc, char **argv)
 	sys_reboot(SYS_REBOOT_COLD);
 }
 SHELL_CMD_REGISTER(wipenvs, NULL, "Wipe the NVS settings partition and reboot", wipenvs_handler);
+#endif
