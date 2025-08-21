@@ -17,9 +17,9 @@ echo "Flashing '$elf_path' ..."
 arm-none-eabi-gdb "$elf_path" \
 	-nx \
 	-batch \
-	-ex 'target extended-remote /dev/ttyACM0' \
-	-ex 'monitor frequency 4M' \
-	-ex 'monitor swdp_scan' \
-	-ex 'attach 1' \
-	-ex 'load' \
-	-ex 'quit'
+	-ex "target extended-remote /dev/ttyACM0" \
+	-ex "monitor frequency 4M" \
+	-ex "monitor swdp_scan" \
+	-ex "attach 1" \
+	-ex "load" \
+	-ex "quit"
