@@ -1,0 +1,5 @@
+# Copyright (c) 2025 Martin Pietryka
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_PUCKJS
+	select SOC_NRF52832_QFAA
