@@ -2,6 +2,7 @@
 
 elf_path=""
 enable_rtt=false
+enable_tpwr=false
 run=false
 
 print_help() {
@@ -11,6 +12,7 @@ print_help() {
 	echo "Options:"
 	echo "  --run            Run the program instead of breaking on main()."
 	echo "  --enable-rtt     Enable RTT (Real-Time Transfer) monitoring."
+	echo "  --enable-tpwr    Enable target power, if not self-powered or VDD is not connected"
 	echo "  -h, --help       Display this help message and exit."
 	echo ""
 	echo "Arguments:"
@@ -25,6 +27,10 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--enable-rtt)
 			enable_rtt=true
+			shift
+			;;
+		--enable-tpwr)
+			enable_tpwr=true
 			shift
 			;;
 		-h | --help)
@@ -70,6 +76,12 @@ else
 	rtt_cmd="monitor rtt disable"
 fi
 
+if "$enable_tpwr"; then
+	tpwr_cmd="monitor tpwr enable"
+else
+	tpwr_cmd="monitor tpwr disable"
+fi
+
 if "$run"; then
 	launch_cmd="run"
 else
@@ -85,6 +97,7 @@ arm-none-eabi-gdb "$elf_path" \
 	-ex "target extended-remote /dev/ttyACM0" \
 	-ex "monitor frequency 4M" \
 	-ex "monitor rtt poll 32 8 10" \
+	-ex "$tpwr_cmd" \
 	-ex "$rtt_cmd" \
 	-ex "monitor swdp_scan" \
 	-ex "attach 1" \
