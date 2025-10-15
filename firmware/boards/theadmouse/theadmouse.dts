@@ -67,6 +67,10 @@
 	pinctrl-names = "default", "sleep";
 };
 
+&reg1 {
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
 &spi0 {
 	status = "okay";
 	pinctrl-0 = <&spi0_default>;
@@ -92,7 +96,6 @@
 	};
 };
 
-
 &uart0 {
 	status = "okay";
 	current-speed = <115200>;
@@ -103,8 +106,4 @@
 
 &uicr {
 	nfct-pins-as-gpios;
-};
-
-&reg1 {
-	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
 };
