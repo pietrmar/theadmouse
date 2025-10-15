@@ -195,6 +195,9 @@ struct imu_quat {
 static struct k_spinlock quat_lock;
 static struct imu_quat last_quat = { .q = { 1.0f, 0.0f, 0.0f, 0.0f } };
 
+static struct k_spinlock magn_lock;
+static float last_magn[3] = { 0.0f, 0.0f, 0.0f };
+
 static int imu_set_last_quat(const struct imu_quat *q)
 {
 	k_spinlock_key_t key = k_spin_lock(&quat_lock);
@@ -238,8 +241,17 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 		LOG_WRN("Gyro clipping (limit: %f): %f %f %f", (double)gyr_clip_limit, (double)gx, (double)gy, (double)gz);
 	}
 
+	k_spinlock_key_t key = k_spin_lock(&magn_lock);
+	float mx = last_magn[0];
+	float my = last_magn[1];
+	float mz = last_magn[2];
+	k_spin_unlock(&magn_lock, key);
+
 	sampleFreq = LSM6DSL_SAMPLE_RATE;
 	MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
+	// NOTE: mx/my is swapped
+	// MadgwickAHRSupdate(gx, gy, gz, ax, ay, az, my, mx, mz);
+
 
 	struct imu_quat new_quat = { .q = { q0, q1, q2, q3 } };
 
@@ -286,6 +298,41 @@ void nus_debug_timer_handler(struct k_timer *timer)
 K_TIMER_DEFINE(nus_debug_timer, nus_debug_timer_handler, NULL);
 #endif
 
+void mag_update_handler(struct k_work *work)
+{
+	const struct device *const lis2mdl_dev = DEVICE_DT_GET_ONE(st_lis2mdl);
+
+	if (!device_is_ready(lis2mdl_dev)) {
+		LOG_ERR("lis2mdl is not ready");
+		return;
+	}
+
+	int ret = sensor_sample_fetch(lis2mdl_dev);
+	if (ret < 0) {
+		LOG_ERR("failed to fetch magn sample: %d", ret);
+		return;
+	}
+
+	struct sensor_value magn[3];
+	ret = sensor_channel_get(lis2mdl_dev, SENSOR_CHAN_MAGN_XYZ, magn);
+	if (ret < 0) {
+		LOG_ERR("failed to get mag value: %d", ret);
+		return;
+	}
+
+	k_spinlock_key_t key = k_spin_lock(&magn_lock);
+	last_magn[0] = sensor_value_to_float(&magn[0]);
+	last_magn[1] = sensor_value_to_float(&magn[1]);
+	last_magn[2] = sensor_value_to_float(&magn[2]);
+	k_spin_unlock(&magn_lock, key);
+}
+K_WORK_DEFINE(mag_update_work, mag_update_handler);
+
+void mag_update_timer_handler(struct k_timer *timer)
+{
+	k_work_submit(&mag_update_work);
+}
+K_TIMER_DEFINE(mag_update_timer, mag_update_timer_handler, NULL);
 
 static struct imu_quat hid_last_quat = { .q = { 1.0f, 0.0f, 0.0f, 0.0f } };
 void hid_work_handler(struct k_work *work)
@@ -396,6 +443,33 @@ static int lsm6dsl_init()
 	return 0;
 }
 
+static int lis2mdl_init()
+{
+	int ret;
+	// TODO: Fetch this via an alias instead
+	const struct device *const lis2mdl_dev = DEVICE_DT_GET_ONE(st_lis2mdl);
+
+	if (!device_is_ready(lis2mdl_dev)) {
+		LOG_ERR("lis2mdl is not ready");
+		return -ENODEV;
+	}
+
+	struct sensor_value odr_value;
+	ret = sensor_value_from_float(&odr_value, 100.0f);
+	if (ret < 0) {
+		LOG_ERR("Failed to convert sampling frequency to sensor value: %d", ret);
+		return ret;
+	}
+
+	ret = sensor_attr_set(lis2mdl_dev, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr_value);
+	if (ret < 0) {
+		LOG_ERR("Failed to set magnetometer sampling frequency: %d", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int led_set_rgb(int r, int g, int b)
 {
 	static const struct led_dt_spec red = LED_DT_SPEC_GET(DT_ALIAS(red_pwm_led));
@@ -463,7 +537,14 @@ int main(void)
 		LOG_ERR("lsm6dsl initialization failed");
 	}
 
+	ret = lis2mdl_init();
+	if (ret < 0) {
+		LOG_ERR("lsm6dsl initialization failed");
+	}
+
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
+	k_timer_start(&mag_update_timer, K_MSEC(0), K_MSEC(10));
+
 #if defined(THEADMOUSE_NUS_DEBUG)
 	k_timer_start(&nus_debug_timer, K_MSEC(0), K_MSEC(25));
 #endif
