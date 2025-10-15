@@ -21,6 +21,8 @@
 #include "hog.h"
 #include "MadgwickAHRS/MadgwickAHRS.h"
 
+// #define THEADMOUSE_NUS_DEBUG
+
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
 
 static const struct bt_data le_adv[] = {
@@ -28,7 +30,10 @@ static const struct bt_data le_adv[] = {
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
 			BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
 			BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+
+#if defined(THEADMOUSE_NUS_DEBUG)
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_SRV_VAL),
+#endif
 };
 
 // Not `const` because we want to change the name before starting the advertisement
@@ -244,6 +249,7 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 	}
 }
 
+#if defined(THEADMOUSE_NUS_DEBUG)
 void nus_debug_handler(struct k_work *work)
 {
 	struct imu_quat cur_quat;
@@ -278,6 +284,7 @@ void nus_debug_timer_handler(struct k_timer *timer)
 	k_work_submit(&nus_debug_work);
 }
 K_TIMER_DEFINE(nus_debug_timer, nus_debug_timer_handler, NULL);
+#endif
 
 
 static struct imu_quat hid_last_quat = { .q = { 1.0f, 0.0f, 0.0f, 0.0f } };
@@ -457,7 +464,9 @@ int main(void)
 	}
 
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
+#if defined(THEADMOUSE_NUS_DEBUG)
 	k_timer_start(&nus_debug_timer, K_MSEC(0), K_MSEC(25));
+#endif
 
 	while (true) {
 		k_msleep(1000);
