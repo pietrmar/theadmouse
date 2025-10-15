@@ -22,6 +22,8 @@
 	chosen {
 		zephyr,console = &uart0;
 		zephyr,shell-uart = &uart0;
+
+		mpi,telemetry-uart = &uart_telemetry;
 	};
 
 	pwmleds {
@@ -106,4 +108,19 @@
 
 &uicr {
 	nfct-pins-as-gpios;
+};
+
+&usbd {
+	status = "okay";
+
+	// FABI style AT configuration interface
+	uart_cmd: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+
+	// Data stream from the IMU, magnetometer, filter output, etc. used
+	// for debugging and visualization
+	uart_telemetry: cdc_acm_uart1 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
 };
