@@ -340,7 +340,7 @@ static int lsm6dsl_init()
 	const struct device *const lsm6dsl_dev = DEVICE_DT_GET_ONE(st_lsm6dsl);
 
 	if (!device_is_ready(lsm6dsl_dev)) {
-		LOG_ERR("lsm6dsl is  not ready");
+		LOG_ERR("lsm6dsl is not ready");
 		return -ENODEV;
 	}
 
