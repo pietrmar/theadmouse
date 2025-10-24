@@ -18,6 +18,8 @@
 
 #include <math.h>
 
+// NOTE: Puck.js MAC: E7:8E:61:16:08:2B
+
 #if 0
 #include "telemetry_uart.h"
 #endif
@@ -29,6 +31,7 @@
 
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
 
+#if defined(CONFIG_BOARD_THEADMOUSE)
 static const struct bt_data le_adv[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
@@ -52,7 +55,54 @@ int ble_start_adv(void)
 
 	return bt_le_adv_start(BT_LE_ADV_CONN, le_adv, ARRAY_SIZE(le_adv), le_scan_rsp, ARRAY_SIZE(le_scan_rsp));
 }
+#elif defined(CONFIG_BOARD_PUCKJS)
 
+#define MFG_ID 0xFFFF
+
+struct __attribute__((packed)) theadmouse_beacon {
+	uint16_t mfg_id;
+	uint8_t seq;
+	uint8_t buttons;
+	int8_t dx;
+	int8_t dy;
+};
+
+static struct theadmouse_beacon cur_beacon;
+
+static const struct bt_data le_adv[] = {
+	BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_NO_BREDR),
+	{
+		.type = BT_DATA_MANUFACTURER_DATA,
+		.data = &cur_beacon,
+		.data_len = sizeof(cur_beacon)
+	},
+};
+
+// Not `const` because we want to change the name before starting the advertisement
+static struct bt_data le_scan_rsp[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+};
+
+static struct bt_le_adv_param adv_param = {
+	.id           = BT_ID_DEFAULT,
+	.sid          = 0,
+	.options      = BT_LE_ADV_OPT_USE_IDENTITY,
+	.interval_min = 120, // 120 = 75 ms
+	.interval_max = 120,
+	.peer         = NULL,
+};
+
+int ble_start_adv(void)
+{
+	cur_beacon.mfg_id = MFG_ID;
+	cur_beacon.seq = 0;
+	cur_beacon.buttons = 0;
+	cur_beacon.dx = 0;
+	cur_beacon.dy = 0;
+
+	return bt_le_adv_start(&adv_param, le_adv, ARRAY_SIZE(le_adv), NULL, 0);
+}
+#endif
 
 static int bt_init_friendly_name(void)
 {
@@ -99,11 +149,13 @@ int ble_init(void)
 		LOG_ERR("Failed to set friendly BT name: %d", ret);
 	}
 
+#if defined(CONFIG_BOARD_THEADMOUSE)
 	ret = hog_init();
 	if (ret < 0) {
 		LOG_ERR("Failed to initialize HOG: %d", ret);
 		return ret;
 	}
+#endif
 
 	ret = ble_start_adv();
 	if (ret < 0) {
@@ -419,7 +471,14 @@ void hid_work_handler(struct k_work *work)
 	//LOG_INF("%d,%d", dx, dy);
 
 	if (dx || dy) {
+#if defined(CONFIG_BOARD_THEADMOUSE)
 		hog_push_report(0, dx, dy);
+#elif defined(CONFIG_BOARD_PUCKJS)
+		cur_beacon.dx = dx;
+		cur_beacon.dy = dy;
+		cur_beacon.seq++;
+		bt_le_adv_update_data(le_adv, ARRAY_SIZE(le_adv), NULL, 0);
+#endif
 	}
 
 	memcpy(&hid_last_quat, &hid_cur_quat, sizeof(hid_last_quat));
@@ -606,7 +665,12 @@ int main(void)
 	}
 #endif
 
+#if defined(CONFIG_BOARD_THEADMOUSE)
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
+#elif defined(CONFIG_BOARD_PUCKJS)
+	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(100));
+#endif
+
 #if 0
 	k_timer_start(&mag_update_timer, K_MSEC(0), K_MSEC(10));
 	k_timer_start(&telemetry_timer, K_MSEC(0), K_MSEC(25));
