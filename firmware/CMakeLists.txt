@@ -6,7 +6,7 @@ project(theadmouse)
 target_sources(app PRIVATE
 		src/hog.c
 		src/main.c
-		src/telemetry_uart.c
+		# src/telemetry_uart.c
 
 		src/MadgwickAHRS/MadgwickAHRS.c
 )

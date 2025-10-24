@@ -18,7 +18,9 @@
 
 #include <math.h>
 
+#if 0
 #include "telemetry_uart.h"
+#endif
 
 #include "hog.h"
 #include "MadgwickAHRS/MadgwickAHRS.h"
@@ -217,6 +219,7 @@ static int imu_get_last_quat(struct imu_quat *q)
 }
 
 
+#if 0
 // Telemetry data for debugging
 struct telemetry_data {
 	float ax, ay, az;
@@ -226,6 +229,7 @@ struct telemetry_data {
 
 static struct telemetry_data telemetry_data;
 static struct k_spinlock telemetry_lock;
+#endif
 
 
 // TODO: Do not do any actual fetching here and move it to a separate thread
@@ -270,11 +274,13 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 	// MadgwickAHRSupdate(gx, gy, gz, ax, ay, az, my, mx, mz);
 
 
+#if 0
 	key = k_spin_lock(&telemetry_lock);
 	telemetry_data.ax = ax; telemetry_data.ay = ay; telemetry_data.az = az;
 	telemetry_data.gx = gx; telemetry_data.gy = gy; telemetry_data.gz = gz;
 	telemetry_data.mx = mx; telemetry_data.my = my; telemetry_data.mz = mz;
 	k_spin_unlock(&telemetry_lock, key);
+#endif
 
 
 	struct imu_quat new_quat = { .q = { q0, q1, q2, q3 } };
@@ -285,6 +291,7 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 	}
 }
 
+#if 0
 void telemetry_handler(struct k_work *work)
 {
 	struct telemetry_data d;
@@ -302,6 +309,7 @@ void telemetry_timer_handler(struct k_timer *timer)
 	k_work_submit(&telemetry_work);
 }
 K_TIMER_DEFINE(telemetry_timer, telemetry_timer_handler, NULL);
+#endif
 
 #if defined(THEADMOUSE_NUS_DEBUG)
 void nus_debug_handler(struct k_work *work)
@@ -340,6 +348,7 @@ void nus_debug_timer_handler(struct k_timer *timer)
 K_TIMER_DEFINE(nus_debug_timer, nus_debug_timer_handler, NULL);
 #endif
 
+#if 0
 void mag_update_handler(struct k_work *work)
 {
 	const struct device *const lis2mdl_dev = DEVICE_DT_GET_ONE(st_lis2mdl);
@@ -376,6 +385,7 @@ void mag_update_timer_handler(struct k_timer *timer)
 	k_work_submit(&mag_update_work);
 }
 K_TIMER_DEFINE(mag_update_timer, mag_update_timer_handler, NULL);
+#endif
 
 static struct imu_quat hid_last_quat = { .q = { 1.0f, 0.0f, 0.0f, 0.0f } };
 void hid_work_handler(struct k_work *work)
@@ -486,6 +496,7 @@ static int lsm6dsl_init()
 	return 0;
 }
 
+#if 0
 static int lis2mdl_init()
 {
 	int ret;
@@ -512,6 +523,7 @@ static int lis2mdl_init()
 
 	return 0;
 }
+#endif
 
 static int led_set_rgb(int r, int g, int b)
 {
@@ -580,19 +592,25 @@ int main(void)
 		LOG_ERR("lsm6dsl initialization failed");
 	}
 
+#if 0
 	ret = lis2mdl_init();
 	if (ret < 0) {
 		LOG_ERR("lsm6dsl initialization failed");
 	}
+#endif
 
+#if 0
 	ret = telemetry_uart_init();
 	if (ret < 0) {
 		LOG_ERR("telemetry uart initialization failed");
 	}
+#endif
 
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
+#if 0
 	k_timer_start(&mag_update_timer, K_MSEC(0), K_MSEC(10));
 	k_timer_start(&telemetry_timer, K_MSEC(0), K_MSEC(25));
+#endif
 
 #if defined(THEADMOUSE_NUS_DEBUG)
 	k_timer_start(&nus_debug_timer, K_MSEC(0), K_MSEC(25));
