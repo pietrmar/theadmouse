@@ -18,6 +18,8 @@
 
 #include <math.h>
 
+#include "telemetry_uart.h"
+
 #include "hog.h"
 #include "MadgwickAHRS/MadgwickAHRS.h"
 
@@ -214,6 +216,19 @@ static int imu_get_last_quat(struct imu_quat *q)
 	return 0;
 }
 
+
+// Telemetry data for debugging
+struct telemetry_data {
+	float ax, ay, az;
+	float gx, gy, gz;
+	float mx, my, mz;
+};
+
+static struct telemetry_data telemetry_data;
+static struct k_spinlock telemetry_lock;
+
+
+// TODO: Do not do any actual fetching here and move it to a separate thread
 static void lsm6dsl_trigger_handler(const struct device *dev, const struct sensor_trigger *trig)
 {
 	struct sensor_value accel[3];
@@ -225,10 +240,12 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 	sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
 
 	// TODO: Is there a helper to make this conversion nicely?
+	// NOTE: In m/s^2
 	float ax = sensor_value_to_float(&accel[0]);
 	float ay = sensor_value_to_float(&accel[1]);
 	float az = sensor_value_to_float(&accel[2]);
 
+	// NOTE: In rad/s
 	float gx = sensor_value_to_float(&gyro[0]);
 	float gy = sensor_value_to_float(&gyro[1]);
 	float gz = sensor_value_to_float(&gyro[2]);
@@ -253,6 +270,13 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 	// MadgwickAHRSupdate(gx, gy, gz, ax, ay, az, my, mx, mz);
 
 
+	key = k_spin_lock(&telemetry_lock);
+	telemetry_data.ax = ax; telemetry_data.ay = ay; telemetry_data.az = az;
+	telemetry_data.gx = gx; telemetry_data.gy = gy; telemetry_data.gz = gz;
+	telemetry_data.mx = mx; telemetry_data.my = my; telemetry_data.mz = mz;
+	k_spin_unlock(&telemetry_lock, key);
+
+
 	struct imu_quat new_quat = { .q = { q0, q1, q2, q3 } };
 
 	int ret = imu_set_last_quat(&new_quat);
@@ -260,6 +284,24 @@ static void lsm6dsl_trigger_handler(const struct device *dev, const struct senso
 		LOG_ERR("failed to set last quaternion");
 	}
 }
+
+void telemetry_handler(struct k_work *work)
+{
+	struct telemetry_data d;
+	k_spinlock_key_t key = k_spin_lock(&telemetry_lock);
+	memcpy(&d, &telemetry_data, sizeof(d));
+	k_spin_unlock(&telemetry_lock, key);
+
+	telemetry_uart_printf("a: %8.4f,%8.4f,%8.4f, g: %8.4f,%8.4f,%8.4f, m: %8.4f,%8.4f,%8.4f\r\n",
+				d.ax, d.ay, d.az, d.gz, d.gy, d.gz, d.mx, d.my, d.mz);
+}
+K_WORK_DEFINE(telemetry_work, telemetry_handler);
+
+void telemetry_timer_handler(struct k_timer *timer)
+{
+	k_work_submit(&telemetry_work);
+}
+K_TIMER_DEFINE(telemetry_timer, telemetry_timer_handler, NULL);
 
 #if defined(THEADMOUSE_NUS_DEBUG)
 void nus_debug_handler(struct k_work *work)
@@ -321,6 +363,7 @@ void mag_update_handler(struct k_work *work)
 	}
 
 	k_spinlock_key_t key = k_spin_lock(&magn_lock);
+	// NOTE: In Gauss
 	last_magn[0] = sensor_value_to_float(&magn[0]);
 	last_magn[1] = sensor_value_to_float(&magn[1]);
 	last_magn[2] = sensor_value_to_float(&magn[2]);
@@ -542,8 +585,14 @@ int main(void)
 		LOG_ERR("lsm6dsl initialization failed");
 	}
 
+	ret = telemetry_uart_init();
+	if (ret < 0) {
+		LOG_ERR("telemetry uart initialization failed");
+	}
+
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
 	k_timer_start(&mag_update_timer, K_MSEC(0), K_MSEC(10));
+	k_timer_start(&telemetry_timer, K_MSEC(0), K_MSEC(25));
 
 #if defined(THEADMOUSE_NUS_DEBUG)
 	k_timer_start(&nus_debug_timer, K_MSEC(0), K_MSEC(25));
