@@ -19,6 +19,7 @@
 #include <math.h>
 
 // NOTE: Puck.js MAC: E7:8E:61:16:08:2B
+static const char *target_addr_str = "E7:8E:61:16:08:2B";
 
 #if 0
 #include "telemetry_uart.h"
@@ -30,6 +31,16 @@
 // #define THEADMOUSE_NUS_DEBUG
 
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
+
+#define MFG_ID 0xFFFF
+
+struct __attribute__((packed)) theadmouse_beacon {
+	uint16_t mfg_id;
+	uint8_t seq;
+	uint8_t buttons;
+	int8_t dx;
+	int8_t dy;
+};
 
 #if defined(CONFIG_BOARD_THEADMOUSE)
 static const struct bt_data le_adv[] = {
@@ -56,16 +67,6 @@ int ble_start_adv(void)
 	return bt_le_adv_start(BT_LE_ADV_CONN, le_adv, ARRAY_SIZE(le_adv), le_scan_rsp, ARRAY_SIZE(le_scan_rsp));
 }
 #elif defined(CONFIG_BOARD_PUCKJS)
-
-#define MFG_ID 0xFFFF
-
-struct __attribute__((packed)) theadmouse_beacon {
-	uint16_t mfg_id;
-	uint8_t seq;
-	uint8_t buttons;
-	int8_t dx;
-	int8_t dy;
-};
 
 static struct theadmouse_beacon cur_beacon;
 
@@ -177,6 +178,66 @@ static struct bt_gatt_exchange_params mtu_exchange_params = {
 	.func = mtu_exchange_cb,
 };
 
+#if defined(CONFIG_BOARD_THEADMOUSE)
+static bt_addr_le_t target_addr;
+static uint8_t last_seq = 0xFF;
+
+static bool ad_parse_mfg_cb(struct bt_data *data, void *user_data)
+{
+	const bt_addr_le_t *addr = (const bt_addr_le_t *)user_data;
+
+	if (data->type != BT_DATA_MANUFACTURER_DATA) {
+		return true;
+	}
+
+	if (data->data_len != sizeof(struct theadmouse_beacon)) {
+		return true;
+	}
+
+	struct theadmouse_beacon *cur_beacon = data->data;
+
+	if (cur_beacon->mfg_id != MFG_ID) {
+		return true;
+	}
+
+	if (cur_beacon->seq == last_seq) {
+		return false;
+	}
+
+	// LOG_INF("%#04x: %d,%d", cur_beacon->seq, cur_beacon->dx, cur_beacon->dy);
+	hog_push_report(0, cur_beacon->dx, cur_beacon->dy);
+
+	last_seq = cur_beacon->seq;
+
+	return false;
+}
+
+static void scan_recv_cb(const bt_addr_le_t *addr, int8_t rssi, uint8_t type, struct net_buf_simple *ad)
+{
+#if 0
+	LOG_INF("ADV %02X:%02X:%02X:%02X:%02X:%02X (%s) RSSI=%d type=0x%02x len=%u",
+	addr->a.val[5], addr->a.val[4], addr->a.val[3],
+	addr->a.val[2], addr->a.val[1], addr->a.val[0],
+	addr->type == BT_ADDR_LE_RANDOM ? "random" : "public",
+	rssi, type, ad->len);
+#endif
+
+	// TODO: Limit to non-connectable legacy advertisements and drop everything else before
+	// even comparing the MAC address.
+
+
+	// static const char *target_addr_str = "E7:8E:61:16:08:2B";
+	// HACK: Something is not working when using `bt_addr_le_cmp()` so let's hardcode it here.
+	if (addr->a.val[5] == 0xE7 && addr->a.val[4] == 0x8E, addr->a.val[3] == 0x61,
+			addr->a.val[2] == 0x16, addr->a.val[1] == 0x08, addr->a.val[0] == 0x2B) {
+
+		bt_data_parse(ad, ad_parse_mfg_cb, (void *)addr);
+	}
+
+	return;
+}
+#endif
+
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -203,6 +264,32 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	if (ret < 0) {
 		LOG_ERR("Failed do adjust connection interval: %d", ret);
 	}
+
+
+#if defined(CONFIG_BOARD_THEADMOUSE)
+	static const struct bt_le_scan_param scan_param = {
+		.type     = BT_LE_SCAN_TYPE_PASSIVE,
+		.options  = BT_LE_SCAN_OPT_NONE,
+		.interval = 160, // 100 ms
+		.window   = 160,
+		.timeout  = 0,
+	};
+
+
+	ret = bt_addr_le_from_str(target_addr_str, "public", &target_addr);
+	if (ret < 0) {
+		ret = bt_addr_le_from_str(target_addr_str, NULL, &target_addr);
+	}
+	if (ret < 0) {
+		LOG_ERR("Failed to parse MAC address: %d", ret);
+	}
+
+	LOG_INF("Starting scan");
+	ret = bt_le_scan_start(&scan_param, &scan_recv_cb);
+	if (ret < 0) {
+		LOG_ERR("Failed to start scan: %d", ret);
+	}
+#endif
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -646,10 +733,12 @@ int main(void)
 		LOG_ERR("BLE initialization failed");
 	}
 
+#if defined(CONFIG_BOARD_PUCKJS)
 	ret = lsm6dsl_init();
 	if (ret < 0) {
 		LOG_ERR("lsm6dsl initialization failed");
 	}
+#endif
 
 #if 0
 	ret = lis2mdl_init();
@@ -666,7 +755,7 @@ int main(void)
 #endif
 
 #if defined(CONFIG_BOARD_THEADMOUSE)
-	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
+	// k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
 #elif defined(CONFIG_BOARD_PUCKJS)
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(100));
 #endif
