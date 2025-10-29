@@ -92,20 +92,6 @@ static const struct bt_data le_adv[] = {
 	},
 };
 
-// Not `const` because we want to change the name before starting the advertisement
-static struct bt_data le_scan_rsp[] = {
-	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
-};
-
-static struct bt_le_adv_param adv_param = {
-	.id           = BT_ID_DEFAULT,
-	.sid          = 0,
-	.options      = BT_LE_ADV_OPT_USE_IDENTITY,
-	.interval_min = 120, // 120 = 75 ms
-	.interval_max = 120,
-	.peer         = NULL,
-};
-
 int ble_start_adv(void)
 {
 	cur_beacon.mfg_id = MFG_ID;
