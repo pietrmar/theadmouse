@@ -68,6 +68,17 @@ int ble_start_adv(void)
 }
 #elif defined(CONFIG_BOARD_PUCKJS)
 
+#define PUCKJS_USE_PERIODIC_ADV
+
+#if defined(PUCKJS_USE_PERIODIC_ADV)
+static struct bt_le_ext_adv *per_le_adv;
+
+static struct bt_data per_default_adv[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+};
+
+#endif
+
 static struct theadmouse_beacon cur_beacon;
 
 static const struct bt_data le_adv[] = {
@@ -101,7 +112,52 @@ int ble_start_adv(void)
 	cur_beacon.dx = 0;
 	cur_beacon.dy = 0;
 
-	return bt_le_adv_start(&adv_param, le_adv, ARRAY_SIZE(le_adv), NULL, 0);
+#if defined(PUCKJS_USE_PERIODIC_ADV)
+	per_default_adv[0].data = bt_get_name();
+	per_default_adv[0].data_len = strlen(bt_get_name());
+
+	int ret = bt_le_ext_adv_create(BT_LE_EXT_ADV_NCONN_IDENTITY, NULL, &per_le_adv);
+	if (ret < 0) {
+		LOG_ERR("Failed to create advertising set: %d", ret);
+		return ret;
+	}
+
+	ret = bt_le_ext_adv_set_data(per_le_adv, per_default_adv, ARRAY_SIZE(per_default_adv), NULL, 0);
+	if (ret < 0) {
+		LOG_ERR("Failed to set advertising data: %d", ret);
+		return ret;
+	}
+
+	// 24 * 1.25 = 30 ms
+	// 8 * 1.25 = 10 ms
+	ret = bt_le_per_adv_set_param(per_le_adv, BT_LE_PER_ADV_PARAM(8, 8, BT_LE_PER_ADV_OPT_NONE));
+	if (ret < 0) {
+		LOG_ERR("Failed to set periodic advertising parameters: %d", ret);
+		return ret;
+	}
+
+	ret = bt_le_per_adv_start(per_le_adv);
+	if (ret < 0) {
+		LOG_ERR("Failed to enable periodic advertising: %d", ret);
+		return ret;
+	}
+
+
+	ret = bt_le_ext_adv_start(per_le_adv, BT_LE_EXT_ADV_START_DEFAULT);
+	if (ret < 0) {
+		LOG_ERR("Failed to start extended advertising: %d", ret);
+		return ret;
+	}
+
+	ret = bt_le_per_adv_set_data(per_le_adv, le_adv, ARRAY_SIZE(le_adv));
+	if (ret < 0) {
+		LOG_ERR("Failed to set extended advertising data: %d", ret);
+		return ret;
+	}
+#else
+	// Advertising interval_min: 48 = 30 ms
+	return bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_USE_IDENTITY, 48, 48, NULL), le_adv, ARRAY_SIZE(le_adv), NULL, 0);
+#endif
 }
 #endif
 
@@ -564,7 +620,12 @@ void hid_work_handler(struct k_work *work)
 		cur_beacon.dx = dx;
 		cur_beacon.dy = dy;
 		cur_beacon.seq++;
+
+#if defined(PUCKJS_USE_PERIODIC_ADV)
+		bt_le_per_adv_set_data(per_le_adv, le_adv, ARRAY_SIZE(le_adv));
+#else
 		bt_le_adv_update_data(le_adv, ARRAY_SIZE(le_adv), NULL, 0);
+#endif
 #endif
 	}
 
@@ -757,7 +818,11 @@ int main(void)
 #if defined(CONFIG_BOARD_THEADMOUSE)
 	// k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
 #elif defined(CONFIG_BOARD_PUCKJS)
+#if defined(PUCKJS_USE_PERIODIC_ADV)
+	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
+#else
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(100));
+#endif
 #endif
 
 #if 0
