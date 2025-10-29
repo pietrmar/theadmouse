@@ -403,6 +403,14 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 
 #if defined(CONFIG_BOARD_THEADMOUSE)
+	ret = bt_addr_le_from_str(target_addr_str, "public", &target_addr);
+	if (ret < 0) {
+		ret = bt_addr_le_from_str(target_addr_str, NULL, &target_addr);
+	}
+	if (ret < 0) {
+		LOG_ERR("Failed to parse MAC address: %d", ret);
+	}
+
 #if defined(THEADMOUSE_USE_PERIODIC_SCAN)
 	static const struct bt_le_scan_param scan_param = {
 		.type     = BT_LE_SCAN_TYPE_ACTIVE,
