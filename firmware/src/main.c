@@ -43,6 +43,8 @@ struct __attribute__((packed)) theadmouse_beacon {
 };
 
 #if defined(CONFIG_BOARD_THEADMOUSE)
+#define THEADMOUSE_USE_PERIODIC_SCAN
+
 static const struct bt_data le_adv[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
@@ -268,6 +270,97 @@ static bool ad_parse_mfg_cb(struct bt_data *data, void *user_data)
 	return false;
 }
 
+#if defined(THEADMOUSE_USE_PERIODIC_SCAN)
+static bool per_adv_found = false;
+
+
+struct bt_le_per_adv_sync_param sync_create_param;
+struct bt_le_per_adv_sync *sync_adv;
+
+
+static void scan_recv(const struct bt_le_scan_recv_info *info, struct net_buf_simple *buf)
+{
+	if (info->addr->a.val[5] == 0xE7 && info->addr->a.val[4] == 0x8E && info->addr->a.val[3] == 0x61,
+			info->addr->a.val[2] == 0x16 && info->addr->a.val[1] == 0x08 && info->addr->a.val[0] == 0x2B) {
+
+		if (!per_adv_found) {
+			LOG_INF("Found theadmouse advertiser");
+			per_adv_found = true;
+
+
+			uint32_t interval_us;
+			uint32_t timeout;
+			static uint16_t per_adv_sync_timeout;
+
+			/* Add retries and convert to unit in 10's of ms */
+			interval_us = BT_GAP_PER_ADV_INTERVAL_TO_US(info->interval);
+			timeout = BT_GAP_US_TO_PER_ADV_SYNC_TIMEOUT(interval_us);
+			/* 10 attempts */
+			timeout *= 10;
+			/* Enforce restraints */
+			per_adv_sync_timeout = CLAMP(timeout, BT_GAP_PER_ADV_MIN_TIMEOUT, BT_GAP_PER_ADV_MAX_TIMEOUT);
+
+
+
+			bt_addr_le_copy(&sync_create_param.addr, info->addr);
+			sync_create_param.options = 0;
+			sync_create_param.sid = info->sid;
+			sync_create_param.skip = 0;
+			sync_create_param.timeout = per_adv_sync_timeout;
+			int ret = bt_le_per_adv_sync_create(&sync_create_param, &sync_adv);
+			if (ret < 0) {
+				LOG_ERR("Failed to create adv sync: %d", ret);
+				per_adv_found = false;
+			}
+		}
+	}
+}
+
+static struct bt_le_scan_cb scan_callbacks = {
+	.recv = scan_recv,
+};
+
+static void sync_cb(struct bt_le_per_adv_sync *sync, struct bt_le_per_adv_sync_synced_info *info)
+{
+	LOG_INF("Got sync_cb");
+}
+
+static void term_cb(struct bt_le_per_adv_sync *sync, const struct bt_le_per_adv_sync_term_info *info)
+{
+	LOG_ERR("Got term_cb");
+	per_adv_found = false;
+}
+
+static void recv_cb(struct bt_le_per_adv_sync *sync, const struct bt_le_per_adv_sync_recv_info *info, struct net_buf_simple *buf)
+{
+	char data_str[129];
+	bin2hex(buf->data, buf->len, data_str, sizeof(data_str));
+
+	// LOG_INF("Got recv_cb, len: %d %s", buf->len, data_str);
+
+	// 02010407ffffffc000baaa
+	struct theadmouse_beacon *cur_beacon = buf->data + 5;
+
+	if (cur_beacon->mfg_id != MFG_ID) {
+		return true;
+	}
+
+	if (cur_beacon->seq == last_seq) {
+		return false;
+	}
+
+	// LOG_INF("%#04x: %d,%d", cur_beacon->seq, cur_beacon->dx, cur_beacon->dy);
+	hog_push_report(0, cur_beacon->dx, cur_beacon->dy);
+
+	last_seq = cur_beacon->seq;
+}
+
+static struct bt_le_per_adv_sync_cb sync_callbacks = {
+	.synced = sync_cb,
+	.term = term_cb,
+	.recv = recv_cb
+};
+#else
 static void scan_recv_cb(const bt_addr_le_t *addr, int8_t rssi, uint8_t type, struct net_buf_simple *ad)
 {
 #if 0
@@ -292,6 +385,7 @@ static void scan_recv_cb(const bt_addr_le_t *addr, int8_t rssi, uint8_t type, st
 
 	return;
 }
+#endif
 #endif
 
 static void connected(struct bt_conn *conn, uint8_t err)
@@ -323,6 +417,24 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 
 #if defined(CONFIG_BOARD_THEADMOUSE)
+#if defined(THEADMOUSE_USE_PERIODIC_SCAN)
+	static const struct bt_le_scan_param scan_param = {
+		.type     = BT_LE_SCAN_TYPE_ACTIVE,
+		.options  = BT_LE_SCAN_OPT_NONE,
+		.interval = BT_GAP_SCAN_FAST_INTERVAL,
+		.window   = BT_GAP_SCAN_FAST_WINDOW,
+		.timeout  = 0,
+	};
+
+
+	LOG_ERR("Starting periodic advertisement scan");
+	bt_le_scan_cb_register(&scan_callbacks);
+	bt_le_per_adv_sync_cb_register(&sync_callbacks);
+	ret = bt_le_scan_start(&scan_param, NULL);
+	if (ret < 0) {
+		LOG_ERR("Failed to start scan: %d", ret);
+	}
+#else
 	static const struct bt_le_scan_param scan_param = {
 		.type     = BT_LE_SCAN_TYPE_PASSIVE,
 		.options  = BT_LE_SCAN_OPT_NONE,
@@ -332,19 +444,12 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	};
 
 
-	ret = bt_addr_le_from_str(target_addr_str, "public", &target_addr);
-	if (ret < 0) {
-		ret = bt_addr_le_from_str(target_addr_str, NULL, &target_addr);
-	}
-	if (ret < 0) {
-		LOG_ERR("Failed to parse MAC address: %d", ret);
-	}
-
 	LOG_INF("Starting scan");
 	ret = bt_le_scan_start(&scan_param, &scan_recv_cb);
 	if (ret < 0) {
 		LOG_ERR("Failed to start scan: %d", ret);
 	}
+#endif
 #endif
 }
 
