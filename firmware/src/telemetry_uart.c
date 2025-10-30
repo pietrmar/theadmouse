@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/spinlock.h>
