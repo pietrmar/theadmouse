@@ -27,3 +27,8 @@ CONFIG_LIS2MDL_MAG_ODR_RUNTIME=y
 
 CONFIG_USB_DEVICE_STACK=y
 CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT=y
+
+# From pid.codes, pending pull request:
+# https://github.com/pidcodes/pidcodes.github.com/pull/1112
+CONFIG_USB_DEVICE_VID=0x1209
+CONFIG_USB_DEVICE_PID=0x7EAD
