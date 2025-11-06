@@ -11,8 +11,9 @@ LOG_MODULE_REGISTER(telemetry_uart, LOG_LEVEL_INF);
 
 #define TELEMETRY_TX_BUF_SIZE	2048
 #define TELEMETRY_TX_CHUNK	256
-RING_BUF_DECLARE(tx_rb, TELEMETRY_TX_BUF_SIZE);
-static struct k_spinlock tx_rb_lock;
+RING_BUF_DECLARE(telemetry_tx_rb, TELEMETRY_TX_BUF_SIZE);
+static struct k_spinlock telemetry_tx_rb_lock;
+K_MUTEX_DEFINE(telemetry_tx_call_lock);
 
 
 // TODO: Don't make this a full compile-time failure when the `mpi,telemetry-uart`
@@ -27,9 +28,9 @@ static void uart_isr(const struct device *dev, void *user_data)
 		if (uart_irq_tx_ready(dev)) {
 			uint8_t buf[TELEMETRY_TX_CHUNK];
 
-			k_spinlock_key_t key = k_spin_lock(&tx_rb_lock);
-			uint32_t rb_len = ring_buf_get(&tx_rb, buf, sizeof(buf));
-			k_spin_unlock(&tx_rb_lock, key);
+			k_spinlock_key_t key = k_spin_lock(&telemetry_tx_rb_lock);
+			uint32_t rb_len = ring_buf_get(&telemetry_tx_rb, buf, sizeof(buf));
+			k_spin_unlock(&telemetry_tx_rb_lock, key);
 			if (rb_len == 0) {
 				// Ringbuffer empty, disable TX interrupts
 				uart_irq_tx_disable(dev);
@@ -58,17 +59,20 @@ static inline bool uart_host_is_ready()
 	return (dtr != 0);
 }
 
+// NOTE: This cannot be called from interrupt context becasue of the sleep and mutex lock.
 static size_t telemetry_uart_write(const uint8_t *data, size_t len)
 {
 	if (!uart_host_is_ready()) {
 		return -ENOTCONN;
 	}
 
+	k_mutex_lock(&telemetry_tx_call_lock, K_FOREVER);
+
 	size_t written = 0;
 	while (written < len) {
-		k_spinlock_key_t key = k_spin_lock(&tx_rb_lock);
-		uint32_t rb_written = ring_buf_put(&tx_rb, &data[written], (uint32_t)(len - written));
-		k_spin_unlock(&tx_rb_lock, key);
+		k_spinlock_key_t key = k_spin_lock(&telemetry_tx_rb_lock);
+		uint32_t rb_written = ring_buf_put(&telemetry_tx_rb, &data[written], (uint32_t)(len - written));
+		k_spin_unlock(&telemetry_tx_rb_lock, key);
 
 		if (rb_written == 0) {
 			// TODO: This is for sure problematic to be called from an ISR
@@ -79,6 +83,8 @@ static size_t telemetry_uart_write(const uint8_t *data, size_t len)
 		written += rb_written;
 		uart_irq_tx_enable(uart_dev);
 	}
+
+	k_mutex_unlock(&telemetry_tx_call_lock);
 
 	return written;
 }
