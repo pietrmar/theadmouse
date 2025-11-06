@@ -21,6 +21,7 @@
 #include <math.h>
 
 #include "telemetry_uart.h"
+#include "cmd_uart.h"
 
 #include "hog.h"
 #include "MadgwickAHRS/MadgwickAHRS.h"
@@ -590,6 +591,11 @@ int main(void)
 	ret = telemetry_uart_init();
 	if (ret < 0) {
 		LOG_ERR("telemetry uart initialization failed");
+	}
+
+	ret = cmd_uart_init();
+	if (ret < 0) {
+		LOG_ERR("cmd uart initialization failed");
 	}
 
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
