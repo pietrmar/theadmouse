@@ -86,7 +86,7 @@ static size_t telemetry_uart_write(const uint8_t *data, size_t len)
 int telemetry_uart_init(void)
 {
 	if (!device_is_ready(uart_dev)) {
-		LOG_ERR("uart device is not read");
+		LOG_ERR("uart device is not ready");
 		return -ENODEV;
 	}
 
