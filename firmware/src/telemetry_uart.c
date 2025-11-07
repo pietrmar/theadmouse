@@ -7,6 +7,8 @@
 #include <zephyr/sys/ring_buffer.h>
 #include <zephyr/logging/log.h>
 
+#include "telemetry_uart.h"
+
 LOG_MODULE_REGISTER(telemetry_uart, LOG_LEVEL_INF);
 
 #define TELEMETRY_TX_BUF_SIZE	2048
@@ -60,7 +62,7 @@ static inline bool uart_host_is_ready()
 }
 
 // NOTE: This cannot be called from interrupt context becasue of the sleep and mutex lock.
-static size_t telemetry_uart_write(const uint8_t *data, size_t len)
+static ssize_t telemetry_uart_write(const uint8_t *data, size_t len)
 {
 	if (!uart_host_is_ready()) {
 		return -ENOTCONN;
@@ -126,8 +128,11 @@ int telemetry_uart_printf(const char *fmt, ...)
 		return n; // Formatting error
 	}
 
-	if (n > sizeof(buf)) {
-		n = sizeof(buf);
+	// Truncate, note that `vsnprintf()` does not count the '\0' character, so
+	// make sure there is space for it.
+	// TODO: Maybe consider returning an error here instead.
+	if (n >= sizeof(buf)) {
+		n = sizeof(buf) - 1;
 	}
 
 	size_t written = telemetry_uart_write(buf, n);
