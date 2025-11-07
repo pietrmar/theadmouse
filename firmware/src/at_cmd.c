@@ -91,6 +91,25 @@ static inline char *rtrim(char *p)
 	return p;
 }
 
+int at_dispatch_cmd(const struct at_cmd *cmd, struct at_cmd_param *param)
+{
+	if (!cmd || !param)
+		return -EINVAL;
+
+	if (!cmd->cb) {
+		// Do not fail here fully but print a warning
+		LOG_WRN("Callback for AT command <%s> not implemented", cmd->name);
+		return 0;
+	}
+
+	// TODO: Print/log the parameter too
+	LOG_DBG("Dispatching <%s>", cmd->name);
+
+	// TODO: Consider serializing this with a mutex in case individual
+	// locking inside the callbacks might get too complicated.
+	return cmd->cb(param, cmd->ctx);
+}
+
 int at_handle_line(char *s, uint16_t len)
 {
 	if (!s) {
@@ -177,13 +196,7 @@ int at_handle_line(char *s, uint16_t len)
 			break;
 	};
 
-	if (!cmd->cb) {
-		// Do not fail here fully but print a warning
-		LOG_WRN("Callback for AT command <%s> not implemented", command);
-		return 0;
-	}
-
-	return cmd->cb(&cmd_param, cmd->ctx);
+	return at_dispatch_cmd(cmd, &cmd_param);
 }
 
 static inline int at_putn(const char *s, size_t len)
