@@ -16,7 +16,7 @@ LOG_MODULE_REGISTER(cmd_uart, LOG_LEVEL_DBG);
 // property is missing.
 static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_cmd_uart));
 
-#define CMD_RX_LINE_MAX		256
+#define CMD_RX_LINE_MAX		(AT_LINE_MAX + 1)
 #define CMD_RX_LINEQ_DEPTH	4
 
 struct rx_line {
@@ -160,7 +160,7 @@ static void line_rx_thread(void *p1, void *p2, void *p3)
 		k_msgq_get(&line_q, &line, K_FOREVER);
 
 		LOG_DBG("Rx: %s", line.buf);
-		int ret = at_handle_line(line.buf, line.len);
+		int ret = at_handle_line(line.buf);
 		if (ret < 0) {
 			LOG_ERR("AT handling failed: %d (line: <%s>)", ret, line.buf);
 		}
