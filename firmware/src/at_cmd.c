@@ -18,13 +18,13 @@ LOG_MODULE_REGISTER(at, LOG_LEVEL_DBG);
 
 #define AT_EOL "\r\n"
 
-int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
+static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 {
 	at_replyf("%s %s PressureSensor=None ForceSensor=None", CONFIG_APP_PROJECT_NAME, APP_VERSION_STRING);
 	return 0;
 }
 
-int at_cmd_LA(const struct at_cmd_param *arg, void *ctx)
+static int at_cmd_LA(const struct at_cmd_param *arg, void *ctx)
 {
 	// HACK: Just return some dummy data for now to make the WebGUI happy
 	LOG_WRN("AT LA not implemented, returning dummy data");
@@ -67,7 +67,7 @@ enum mouse_axis {
 // have a proper queuing system in place. But for a quick demo
 // it will do.
 extern void hog_push_report(int8_t btn, int8_t x, int8_t y);
-int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
+static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 {
 	int d;
 	enum mouse_axis a = (enum mouse_axis)ctx;
