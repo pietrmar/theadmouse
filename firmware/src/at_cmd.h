@@ -1,5 +1,8 @@
 #pragma once
 
+#define AT_LINE_MAX	255
+#define AT_EOL		"\r\n"
+
 enum at_param_type {
 	AT_PARAM_NONE = 0,
 	AT_PARAM_INT,
@@ -26,7 +29,13 @@ struct at_cmd {
 	void *ctx;
 };
 
-int at_handle_line(char *s, uint16_t len);
+int at_handle_line_copy(const char *s);
+int at_handle_line_mut(char *s);
+
+// This automatically selects the copy variant if a string literal is used
+#define at_handle_line(s) \
+	(__builtin_constant_p(s) ? at_handle_line_copy((s)) : at_handle_line_mut((s)))
+
 int at_dispatch_cmd(const struct at_cmd *cmd, struct at_cmd_param *param);
 
 int at_reply(const char *s);

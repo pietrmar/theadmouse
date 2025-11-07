@@ -16,8 +16,6 @@
 
 LOG_MODULE_REGISTER(at, LOG_LEVEL_DBG);
 
-#define AT_EOL "\r\n"
-
 static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 {
 	at_replyf("%s %s PressureSensor=None ForceSensor=None", CONFIG_APP_PROJECT_NAME, APP_VERSION_STRING);
@@ -152,14 +150,33 @@ int at_dispatch_cmd(const struct at_cmd *cmd, struct at_cmd_param *param)
 	return cmd->cb(param, cmd->ctx);
 }
 
-int at_handle_line(char *s, uint16_t len)
+// Copies the string first to the stack because our parser will modify it
+// in place. This is needed when we are parsing string literals.
+int at_handle_line_copy(const char *s)
 {
 	if (!s) {
 		return -EINVAL;
 	}
 
-	// NOTE: The string processing here does not make use of  `len` and adjusts
-	// the pointer and string in place, so `len` is not the string length anymore.
+	size_t len = strlen(s);
+	if (len == 0) {
+		return -EINVAL;
+	}
+
+	if (len > AT_LINE_MAX) {
+		return -EMSGSIZE;
+	}
+
+	char buf[AT_LINE_MAX + 1];
+	memcpy(buf, s, len + 1);
+	return at_handle_line(buf);
+}
+
+int at_handle_line_mut(char *s)
+{
+	if (!s) {
+		return -EINVAL;
+	}
 
 	// Remove any trailing and leading whitespace
 	s = ltrim(s);
