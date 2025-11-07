@@ -6,6 +6,11 @@ module = THEADMOUSE
 module-str = theadmouse
 source "subsys/logging/Kconfig.template.log_config"
 
+config APP_PROJECT_NAME
+	string "Project name"
+	default "ThreadMouse"
+	help
+		Human-readable name of this firmware/application
 endmenu
 
 source "Kconfig.zephyr"
