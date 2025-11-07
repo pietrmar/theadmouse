@@ -70,7 +70,7 @@ struct at_cmd {
 
 int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 {
-	at_replyf("%s %s", CONFIG_APP_PROJECT_NAME, APP_VERSION_STRING);
+	at_replyf("%s %s PressureSensor=None ForceSensor=None", CONFIG_APP_PROJECT_NAME, APP_VERSION_STRING);
 	return 0;
 }
 
