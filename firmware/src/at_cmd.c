@@ -74,8 +74,44 @@ int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+int at_cmd_LA(const struct at_cmd_param *arg, void *ctx)
+{
+	// HACK: Just return some dummy data for now to make the WebGUI happy
+	LOG_WRN("AT LA not implemented, returning dummy data");
+
+	at_reply("Slot:mouse");
+	at_reply("AT SC 0x00ffff");
+	at_reply("AT SB 2");
+	at_reply("AT AX 60");
+	at_reply("AT AY 60");
+	at_reply("AT DX 20");
+	at_reply("AT DY 20");
+	at_reply("AT MS 50");
+	at_reply("AT AC 50");
+	at_reply("AT TS 500");
+	at_reply("AT TP 525");
+	at_reply("AT SP 700");
+	at_reply("AT SS 300");
+	at_reply("AT MM 1");
+	at_reply("AT RO 0");
+	at_reply("AT BT 1");
+	at_reply("AT BM 1");
+	at_reply("AT KP KEY_UP");
+	at_reply("AT BM 2");
+	at_reply("AT KP KEY_DOWN");
+	at_reply("AT BM 3");
+	at_reply("AT KP KEY_LEFT");
+	at_reply("AT BM 4");
+	at_reply("AT KP KEY_RIGHT");
+	at_reply("END");
+
+	return 0;
+}
+
 static const struct at_cmd at_cmds[] = {
 	{ "ID", AT_PARAM_NONE, at_cmd_ID, NULL },
+
+	{ "LA", AT_PARAM_NONE, at_cmd_LA, NULL },
 };
 
 static const struct at_cmd *find_at_cmd(const char *cmd)
