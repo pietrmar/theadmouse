@@ -2,5 +2,7 @@
 
 #pragma once
 
+#include <sys/types.h>
+
 int cmd_uart_init(void);
-int at_reply_printf(const char *fmt, ...);
+ssize_t cmd_uart_write(const uint8_t *data, size_t len);

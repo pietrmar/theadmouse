@@ -7,6 +7,9 @@
 #include <zephyr/sys/ring_buffer.h>
 #include <zephyr/logging/log.h>
 
+#include "cmd_uart.h"
+#include "at_cmd.h"
+
 LOG_MODULE_REGISTER(cmd_uart, LOG_LEVEL_DBG);
 
 // TODO: Don't make this a full compile-time failure when the `mpi,cmd-uart`
@@ -119,7 +122,7 @@ static inline bool uart_host_is_ready()
 }
 
 // NOTE: This cannot be called from interrupt context becasue of the sleep and mutex lock.
-static size_t cmd_uart_write(const uint8_t *data, size_t len)
+ssize_t cmd_uart_write(const uint8_t *data, size_t len)
 {
 	if (!uart_host_is_ready()) {
 		return -ENOTCONN;
@@ -147,37 +150,6 @@ static size_t cmd_uart_write(const uint8_t *data, size_t len)
 	return written;
 }
 
-int at_reply_printf(const char *fmt, ...)
-{
-	char buf[256];
-
-	va_list args;
-	va_start(args, fmt);
-	int n = vsnprintf(buf, sizeof(buf), fmt, args);
-	va_end(args);
-
-	if (n < 0) {
-		return n; // Formatting error
-	}
-
-	if (n > sizeof(buf)) {
-		n = sizeof(buf);
-	}
-
-	size_t written = cmd_uart_write(buf, n);
-	return written;
-}
-
-static void at_handle_line(const char *s, uint16_t len)
-{
-	// TODO: Implement the proper handling and dispatch to command handlers and such
-	if (strcmp(s, "AT") == 0) {
-		at_reply_printf("OK\r\n");
-	} else if (strcmp(s, "AT ID") == 0) {
-		at_reply_printf("TheadMouse 3.4.5\r\n");
-	}
-}
-
 static void line_rx_thread(void *p1, void *p2, void *p3)
 {
 	ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
@@ -188,7 +160,10 @@ static void line_rx_thread(void *p1, void *p2, void *p3)
 		k_msgq_get(&line_q, &line, K_FOREVER);
 
 		LOG_DBG("Rx: %s", line.buf);
-		at_handle_line(line.buf, line.len);
+		int ret = at_handle_line(line.buf, line.len);
+		if (ret < 0) {
+			LOG_ERR("AT handling failed: %d (line: <%s>)", ret, line.buf);
+		}
 	}
 }
 
