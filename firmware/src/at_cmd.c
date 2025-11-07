@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <errno.h>
@@ -33,6 +34,30 @@ struct at_cmd_param {
 		char *s;
 	} val;
 };
+
+static inline int at_param_get_int(const struct at_cmd_param *p, int32_t *out)
+{
+	if (!p || !out) return -ENODATA;
+	if (p->type != AT_PARAM_INT) return -EINVAL;
+	*out = p->val.i;
+	return 0;
+}
+
+static inline int at_param_get_uint(const struct at_cmd_param *p, uint32_t *out)
+{
+	if (!p || !out) return -ENODATA;
+	if (p->type != AT_PARAM_UINT) return -EINVAL;
+	*out = p->val.ui;
+	return 0;
+}
+
+static inline int at_param_get_str(const struct at_cmd_param *p, char **out)
+{
+	if (!p || !out) return -ENODATA;
+	if (p->type != AT_PARAM_STR) return -EINVAL;
+	*out = p->val.s;
+	return 0;
+}
 
 typedef int (*at_cmd_fn)(const struct at_cmd_param *arg, void *ctx);
 
@@ -187,9 +212,17 @@ int at_handle_line(char *s, uint16_t len)
 
 	struct at_cmd_param cmd_param = { .type = cmd->param_type };
 
-	// TODO: Handle all the other param types
 	switch (cmd->param_type) {
 		case AT_PARAM_NONE:
+			break;
+		case AT_PARAM_INT:
+			cmd_param.val.i = strtol(param, NULL, 0);
+			break;
+		case AT_PARAM_UINT:
+			cmd_param.val.ui = strtoul(param, NULL, 0);
+			break;
+		case AT_PARAM_STR:
+			cmd_param.val.s = param;
 			break;
 		default:
 			LOG_WRN("Unhandled param_type %d", cmd->param_type);
