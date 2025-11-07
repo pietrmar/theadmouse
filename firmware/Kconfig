@@ -1,6 +1,6 @@
 mainmenu "theadmouse"
 
-menu "theadmouse Configuration"
+menu "TheadMouse Configuration"
 
 module = THEADMOUSE
 module-str = theadmouse
@@ -8,7 +8,7 @@ source "subsys/logging/Kconfig.template.log_config"
 
 config APP_PROJECT_NAME
 	string "Project name"
-	default "ThreadMouse"
+	default "TheadMouse"
 	help
 		Human-readable name of this firmware/application
 endmenu
