@@ -108,8 +108,39 @@ int at_cmd_LA(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+enum mouse_axis {
+	MOUSE_AXIS_X,
+	MOUSE_AXIS_Y,
+};
+
+// HACK: Do not use hog_push_report() directly from here, instead
+// have a proper queuing system in place. But for a quick demo
+// it will do.
+extern void hog_push_report(int8_t btn, int8_t x, int8_t y);
+int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
+{
+	int d;
+	enum mouse_axis a = (enum mouse_axis)ctx;
+
+	int ret = at_param_get_int(arg, &d);
+	if (ret < 0)
+		return ret;
+
+	LOG_WRN("Directly using hog_push_report()");
+	if (a == MOUSE_AXIS_X) {
+		hog_push_report(0, d, 0);
+	} else if (a == MOUSE_AXIS_Y) {
+		hog_push_report(0, 0, d);
+	}
+
+	return 0;
+}
+
 static const struct at_cmd at_cmds[] = {
 	{ "ID", AT_PARAM_NONE, at_cmd_ID, NULL },
+
+	{ "MX", AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
+	{ "MY", AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
 
 	{ "LA", AT_PARAM_NONE, at_cmd_LA, NULL },
 };
