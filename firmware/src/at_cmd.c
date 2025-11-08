@@ -131,6 +131,13 @@ static inline char *rtrim(char *p)
 	return p;
 }
 
+// TODO: Consider reworking this without a mutex but instead queueing
+// up commands. However we would need to make a copy of cmd + param.
+// The `at_cmd_param_clone()` will do a heap alloc so maybe we do not
+// want that.
+// Consider rewriting `at_cmd_param` to make use of string inlining for
+// short strings and use a slab allocator for longer strings.
+static K_MUTEX_DEFINE(at_dispatch_lock);
 static int at_dispatch_internal(const struct at_cmd *cmd, const struct at_cmd_param *param)
 {
 	char buf[3];
@@ -138,18 +145,27 @@ static int at_dispatch_internal(const struct at_cmd *cmd, const struct at_cmd_pa
 	if (!cmd || !param)
 		return -EINVAL;
 
+	if (k_is_in_isr()) {
+		LOG_ERR("at_dispatch_internal() called from ISR");
+		return -EWOULDBLOCK;
+	}
+
 	if (!cmd->cb) {
 		// Do not fail here fully but print a warning
 		LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(cmd->code, buf));
 		return 0;
 	}
 
+
+	k_mutex_lock(&at_dispatch_lock, K_FOREVER);
+
 	// TODO: Print/log the parameter too
 	LOG_DBG("Dispatching <%s>", at_code_to_str(cmd->code, buf));
+	int ret = cmd->cb(param, cmd->ctx);
 
-	// TODO: Consider serializing this with a mutex in case individual
-	// locking inside the callbacks might get too complicated.
-	return cmd->cb(param, cmd->ctx);
+	k_mutex_unlock(&at_dispatch_lock);
+
+	return ret;
 }
 
 int at_dispatch_cmd(const uint16_t code, const struct at_cmd_param *param)
