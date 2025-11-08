@@ -276,8 +276,14 @@ int at_handle_line_mut(char *s)
 	}
 
 	// Check and print a warning but do not fail if we have extra parameters
-	if (cmd->param_type == AT_PARAM_NONE && param != 0) {
+	if (cmd->param_type == AT_PARAM_NONE && param != NULL) {
 		LOG_WRN("AT cmd <%s> does not take parameters, ignoring <%s>", command, param);
+	}
+
+	// Fail if a parameter is missing
+	if (cmd->param_type != AT_PARAM_NONE && param == NULL) {
+		LOG_WRN("AT cmd <%s> requires a parameter", command);
+		return -EINVAL;
 	}
 
 	struct at_cmd_param cmd_param = { .type = cmd->param_type };
