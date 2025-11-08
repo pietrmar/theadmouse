@@ -29,11 +29,13 @@ static struct button_mapping btn_map[] = {
 	{ .code = INPUT_BTN_3, .valid = false },
 };
 
-int button_manager_set_mapping(int idx, const uint16_t at_code, const struct at_cmd_param *at_param)
+const size_t button_manager_num_buttons = ARRAY_SIZE(btn_map);
+
+int button_manager_set_mapping(size_t idx, const uint16_t at_code, const struct at_cmd_param *at_param)
 {
 	char buf[3];
 
-	if (idx < 0 || idx >= ARRAY_SIZE(btn_map)) {
+	if (!button_manager_valid_index(idx)) {
 		LOG_WRN("Button index %d out of range", idx);
 		return -EINVAL;
 	}
@@ -61,9 +63,9 @@ int button_manager_set_mapping(int idx, const uint16_t at_code, const struct at_
 	return 0;
 }
 
-int button_manager_delete_mapping(int idx)
+int button_manager_delete_mapping(size_t idx)
 {
-	if (idx < 0 || idx >= ARRAY_SIZE(btn_map)) {
+	if (!button_manager_valid_index(idx)) {
 		LOG_WRN("Button index %d out of range", idx);
 		return -EINVAL;
 	}
