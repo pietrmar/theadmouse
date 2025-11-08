@@ -8,11 +8,13 @@
 #include <errno.h>
 #include <ctype.h>
 
+#include <zephyr/kernel.h>
 #include <zephyr/app_version.h>
 #include <zephyr/logging/log.h>
 
 #include "at_cmd.h"
 #include "cmd_uart.h"
+#include "button_manager.h"
 
 LOG_MODULE_REGISTER(at, LOG_LEVEL_DBG);
 
@@ -84,11 +86,37 @@ static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+// TODO: Instead of handling this ourselved here, add a simple `button_manager_arm()` or so
+// API to separate the concerns better and also check against other things. This could also
+// move the size/index check into the button_manager.
+static int32_t set_slot_command = -1;
+static int at_cmd_BM(const struct at_cmd_param *arg, void *ctx)
+{
+	uint32_t btn_idx;
+
+	int ret = at_param_get_uint(arg, &btn_idx);
+	if (ret < 0)
+		return ret;
+
+	// For the end user the index starts at 1, but internally it
+	// starts at 0, so we need to check this here.
+	if (btn_idx < 1 || !button_manager_valid_index(btn_idx - 1)) {
+		LOG_ERR("Button index %u is out of range", btn_idx);
+		return -EINVAL;
+	}
+
+	set_slot_command = btn_idx - 1;
+
+	return 0;
+}
+
 static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(ID), AT_PARAM_NONE, at_cmd_ID, NULL },
 
 	{ MAKE2CC(MX), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
 	{ MAKE2CC(MY), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
+
+	{ MAKE2CC(BM), AT_PARAM_UINT, at_cmd_BM, NULL },
 
 	{ MAKE2CC(LA), AT_PARAM_NONE, at_cmd_LA, NULL },
 };
@@ -304,6 +332,15 @@ int at_handle_line_mut(char *s)
 			LOG_WRN("Unhandled param_type %d", cmd->param_type);
 			break;
 	};
+
+	// TODO: Move this to the `at_dispatch_internal()` handler, and think about locking and other
+	// weird edge cases.
+	// TODO: Make use of the `button_manager_arm()` API or so.
+	if (set_slot_command != -1) {
+		int ret = button_manager_set_mapping(set_slot_command, cmd->code, &cmd_param);
+		set_slot_command = -1;
+		return ret;
+	}
 
 	return at_dispatch_internal(cmd, &cmd_param);
 }
