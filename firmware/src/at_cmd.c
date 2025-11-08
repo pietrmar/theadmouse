@@ -85,18 +85,18 @@ static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 }
 
 static const struct at_cmd at_cmds[] = {
-	{ "ID", AT_PARAM_NONE, at_cmd_ID, NULL },
+	{ MAKE2CC(ID), AT_PARAM_NONE, at_cmd_ID, NULL },
 
-	{ "MX", AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
-	{ "MY", AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
+	{ MAKE2CC(MX), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
+	{ MAKE2CC(MY), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
 
-	{ "LA", AT_PARAM_NONE, at_cmd_LA, NULL },
+	{ MAKE2CC(LA), AT_PARAM_NONE, at_cmd_LA, NULL },
 };
 
-static const struct at_cmd *find_at_cmd(const char *cmd)
+static const struct at_cmd *find_at_cmd(const uint16_t code)
 {
 	for (int i = 0; i < ARRAY_SIZE(at_cmds); i++) {
-		if (strcasecmp(cmd, at_cmds[i].name) == 0) {
+		if (at_cmds[i].code == code) {
 			return &at_cmds[i];
 		}
 	}
@@ -131,23 +131,37 @@ static inline char *rtrim(char *p)
 	return p;
 }
 
-int at_dispatch_cmd(const struct at_cmd *cmd, struct at_cmd_param *param)
+static int at_dispatch_internal(const struct at_cmd *cmd, const struct at_cmd_param *param)
 {
+	char buf[3];
+
 	if (!cmd || !param)
 		return -EINVAL;
 
 	if (!cmd->cb) {
 		// Do not fail here fully but print a warning
-		LOG_WRN("Callback for AT command <%s> not implemented", cmd->name);
+		LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(cmd->code, buf));
 		return 0;
 	}
 
 	// TODO: Print/log the parameter too
-	LOG_DBG("Dispatching <%s>", cmd->name);
+	LOG_DBG("Dispatching <%s>", at_code_to_str(cmd->code, buf));
 
 	// TODO: Consider serializing this with a mutex in case individual
 	// locking inside the callbacks might get too complicated.
 	return cmd->cb(param, cmd->ctx);
+}
+
+int at_dispatch_cmd(const uint16_t code, const struct at_cmd_param *param)
+{
+	const struct at_cmd *cmd = find_at_cmd(code);
+	if (cmd == NULL) {
+		char buf[3];
+		LOG_ERR("Could not find AT cmd <%s>", at_code_to_str(code, buf));
+		return -ENOTSUP;
+	}
+
+	return at_dispatch_internal(cmd, param);
 }
 
 // Copies the string first to the stack because our parser will modify it
@@ -232,8 +246,14 @@ int at_handle_line_mut(char *s)
 		LOG_DBG("cmd: <%s>, param: <%s>", command, param);
 	}
 
+	size_t cmdlen = strlen(command);
+	if (cmdlen != 2) {
+		LOG_ERR("Unexpected AT code <%s> length, got: %zu, expected: 3", command, cmdlen);
+		return -EINVAL;
+	}
+
 	// Find the command
-	const struct at_cmd *cmd = find_at_cmd(command);
+	const struct at_cmd *cmd = find_at_cmd(at_code_from_str(command));
 	if (cmd == NULL) {
 		LOG_ERR("Could not find AT cmd <%s>", command);
 		return -ENOTSUP;
@@ -263,7 +283,7 @@ int at_handle_line_mut(char *s)
 			break;
 	};
 
-	return at_dispatch_cmd(cmd, &cmd_param);
+	return at_dispatch_internal(cmd, &cmd_param);
 }
 
 static inline int at_putn(const char *s, size_t len)
