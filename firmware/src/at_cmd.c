@@ -348,3 +348,54 @@ int at_replyf(const char *fmt, ...)
 
 	return at_replyn(buf, n);
 }
+
+struct at_cmd_param *at_cmd_param_clone(const struct at_cmd_param *param)
+{
+	if (param == NULL)
+		return NULL;
+
+	struct at_cmd_param *np = k_malloc(sizeof(*param));
+	if (np == NULL)
+		return NULL;
+
+	// Copy the type
+	np->type = param->type;
+
+	// Copy the value (allocate space for the string parameter if needed)
+	switch (np->type) {
+		case AT_PARAM_NONE:
+			break;
+		case AT_PARAM_INT:
+			np->val.i = param->val.i;
+			break;
+		case AT_PARAM_UINT:
+			np->val.ui = param->val.ui;
+			break;
+		case AT_PARAM_STR:
+			size_t len = strlen(param->val.s) + 1;
+			np->val.s = k_malloc(len);
+			if (!np->val.s) {
+				k_free(np);
+				return NULL;
+			}
+			memcpy(np->val.s, param->val.s, len);
+			break;
+		default:
+			LOG_WRN("Unknown param type %d", param->type);
+			break;
+	}
+
+	return np;
+}
+
+// TODO: Do not use `k_malloc()`/`k_free()` and instead use slab alloc
+void at_cmd_param_free(struct at_cmd_param *param)
+{
+	if (param == NULL)
+		return;
+
+	if (param->type == AT_PARAM_STR)
+		k_free(param->val.s);
+
+	k_free(param);
+}

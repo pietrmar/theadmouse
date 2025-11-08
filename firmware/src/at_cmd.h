@@ -12,6 +12,8 @@ enum at_param_type {
 	AT_PARAM_STR,
 };
 
+// TODO: The string parameter is usually short, think about inlining a few bytes
+// and only fallback to a pointer if the parameter is actually longer.
 struct at_cmd_param {
 	enum at_param_type type;
 
@@ -21,6 +23,8 @@ struct at_cmd_param {
 		char *s;
 	} val;
 };
+struct at_cmd_param *at_cmd_param_clone(const struct at_cmd_param *param);
+void at_cmd_param_free(struct at_cmd_param *param);
 
 typedef int (*at_cmd_fn)(const struct at_cmd_param *arg, void *ctx);
 
