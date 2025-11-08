@@ -20,6 +20,7 @@
 
 #include <math.h>
 
+#include "button_manager.h"
 #include "telemetry_uart.h"
 #include "cmd_uart.h"
 
@@ -591,6 +592,11 @@ int main(void)
 	ret = telemetry_uart_init();
 	if (ret < 0) {
 		LOG_ERR("telemetry uart initialization failed");
+	}
+
+	ret = button_manager_init();
+	if (ret < 0) {
+		LOG_ERR("button manager initialization fialed");
 	}
 
 	ret = cmd_uart_init();
