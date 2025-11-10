@@ -1,0 +1,21 @@
+# NOTE: Keep this in sync with `theadmouse_partition.dtsi`
+boot:
+  address: 0x0
+  end_address: 0xc000
+  size: 0xc000
+  region: flash_primary
+app:
+  address: 0xc000
+  end_address: 0xf8000
+  size: 0xec000
+  region: flash_primary
+littlefs_storage:
+  address: 0xf8000
+  end_address: 0x100000
+  size: 0x8000
+  region: flash_primary
+sram_primary:
+  address: 0x20000000
+  end_address: 0x20040000
+  size: 0x40000
+  region: sram_primary

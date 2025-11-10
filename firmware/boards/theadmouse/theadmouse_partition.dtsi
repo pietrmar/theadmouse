@@ -1,0 +1,46 @@
+/ {
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &app_partition;
+	};
+
+	fstab {
+		compatible = "zephyr,fstab";
+		lfs: lfs {
+			compatible = "zephyr,fstab,littlefs";
+			mount-point = "/lfs";
+			partition = <&littlefs_storage_partition>;
+			automount;
+			read-size = <16>;
+			prog-size = <16>;
+			cache-size = <64>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
+	};
+};
+
+&flash0 {
+	// NOTE: Keep this in sync with `pm_static.yml`
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "boot";
+			reg = <0x00000000 0x0000C000>;
+		};
+
+		app_partition: partition@c000 {
+			label = "app";
+			reg = <0x0000C000 0x000EC000>;
+		};
+
+		littlefs_storage_partition: partition@f8000 {
+			label = "littlefs_storage";
+			reg = <0x000F8000 0x00008000>;
+		};
+	};
+};
