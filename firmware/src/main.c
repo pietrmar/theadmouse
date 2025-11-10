@@ -174,11 +174,11 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 // Possible values from the data-sheet:
 //  1.6, 12.5, 26, 52, 104, 208, 416, 833, 1666, 3332, 6664
-// NOTE: From experimentation, the fetching of the samples via
-// I2C and calulating the Madgwick filter takes roughly
-// ~800-1000 us, so 833 Hz is the sensible maximum here.
-// NOTE: Running below 416 Hz increases the gyro drift
-#define LSM6DSL_SAMPLE_RATE	416.0f
+//  NOTE: Running at 416 Hz and up currently is not stable,
+//  this is moste likely does to scheduling issues and the
+//  way the driver handles the interrupts, we should optimize
+//  the LSM6DSL driver in the future.
+#define LSM6DSL_SAMPLE_RATE	208.0f
 
 // Posible values from the data-sheet in g:
 //  2, 4, 8, 16
