@@ -691,6 +691,9 @@ static int dfureboot_handler(const struct shell *shell, size_t argc, char **argv
 }
 SHELL_CMD_REGISTER(dfureboot, NULL, "Reboot into DFU mode (UF2 and CDC)", dfureboot_handler);
 
+#if 0
+// TODO: We should not erase the whole flash now as we have LittleFS running on
+// it. So think about what to erase exactly.
 static int wipenvs_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	const struct flash_area *fa;
@@ -714,4 +717,5 @@ static int wipenvs_handler(const struct shell *shell, size_t argc, char **argv)
 	sys_reboot(SYS_REBOOT_COLD);
 }
 SHELL_CMD_REGISTER(wipenvs, NULL, "Wipe the NVS settings partition and reboot", wipenvs_handler);
+#endif
 #endif
