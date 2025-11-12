@@ -23,6 +23,7 @@
 #include "button_manager.h"
 #include "telemetry_uart.h"
 #include "cmd_uart.h"
+#include "at_cmd.h"
 
 #include "hog.h"
 #include "MadgwickAHRS/MadgwickAHRS.h"
@@ -620,6 +621,43 @@ int main(void)
 }
 
 #if defined(CONFIG_SHELL)
+static int cmd_at(const struct shell *shell, size_t argc, char **argv)
+{
+	if (argc < 2) {
+		shell_print(shell, "Usage: AT <command_line>");
+		return -EINVAL;
+	}
+
+	char line[AT_LINE_MAX + 1] = {0};
+	size_t offset = 0;
+
+	for (size_t i = 1; i < argc; i++) {
+		size_t len = strlen(argv[i]);
+
+		if ((offset + len) >= (sizeof(line) - 1)) {
+			shell_print(shell, "Error: command too long");
+			return -EMSGSIZE;
+		}
+
+		memcpy(line + offset, argv[i], len);
+		offset += len;
+
+		if ((i + 1) < argc)
+			line[offset++] = ' ';
+	}
+
+	line[offset] = '\0';
+
+	int ret = at_handle_line_inplace(line, AT_FLAG_PARSER_ALLOW_NO_PREFIX);
+	if (ret < 0) {
+		shell_print(shell, "AT command error: %d", ret);
+		return ret;
+	}
+
+	return 0;
+}
+SHELL_CMD_REGISTER(AT, NULL, "Parse and execute AT command", cmd_at);
+
 static int reboot_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	shell_print(shell, "Rebooting");
