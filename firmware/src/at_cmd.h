@@ -5,6 +5,8 @@
 #define AT_LINE_MAX	255
 #define AT_EOL		"\r\n"
 
+#define AT_FLAG_PARSER_ALLOW_NO_PREFIX		(1 << 0)
+
 enum at_param_type {
 	AT_PARAM_NONE = 0,
 	AT_PARAM_INT,
@@ -51,12 +53,11 @@ struct at_cmd {
 	void *ctx;
 };
 
-int at_handle_line_copy(const char *s);
-int at_handle_line_mut(char *s);
+int at_handle_line_inplace(char *s, uint32_t flags);
+int at_handle_line_copy(const char *s, uint32_t flags);
 
-// This automatically selects the copy variant if a string literal is used
-#define at_handle_line(s) \
-	(__builtin_constant_p(s) ? at_handle_line_copy((s)) : at_handle_line_mut((s)))
+int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
+int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
 
 int at_dispatch_cmd(const uint16_t code, const struct at_cmd_param *param);
 

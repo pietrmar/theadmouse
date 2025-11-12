@@ -208,70 +208,50 @@ int at_dispatch_cmd(const uint16_t code, const struct at_cmd_param *param)
 	return at_dispatch_internal(cmd, param);
 }
 
-// Copies the string first to the stack because our parser will modify it
-// in place. This is needed when we are parsing string literals.
-int at_handle_line_copy(const char *s)
+// NOTE: If we just got a plain AT command without any parameters or so then this will return NULL and `*out_cmd = NULL`.
+// NOTE: The assigned `*out_cmd_param` is not deep copied, so if you nede to keep it alive make sure to use `at_cmd_param_clone()`
+// TODO: Maybe add a flag like `AT_FLAG_CLONE_PARAMS` that makes a deep-copy if needed.
+int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags)
 {
-	if (!s) {
+	if (!s || !out_cmd || !out_cmd_param)
 		return -EINVAL;
-	}
-
-	size_t len = strlen(s);
-	if (len == 0) {
-		return -EINVAL;
-	}
-
-	if (len > AT_LINE_MAX) {
-		return -EMSGSIZE;
-	}
-
-	char buf[AT_LINE_MAX + 1];
-	memcpy(buf, s, len + 1);
-	return at_handle_line(buf);
-}
-
-int at_handle_line_mut(char *s)
-{
-	if (!s) {
-		return -EINVAL;
-	}
 
 	// Remove any trailing and leading whitespace
 	s = ltrim(s);
 	s = rtrim(s);
 
-	if (*s == '\0') {
+	if (*s == '\0')
 		return -EINVAL;
-	}
 
-	if (strncasecmp(s, "AT", 2) != 0) {
-		return -EINVAL;
-	}
-	s += 2;
+	if (strncasecmp(s, "AT", 2) == 0) {
+		s += 2;
 
-	// Plain AT command just return OK
-	if (*s == '\0') {
-		at_reply("OK");
-		return 0;
-	}
+		// Plain AT command just return OK
+		if (*s == '\0') {
+			*out_cmd = NULL;
+			return 0;
+		}
 
-	// The next character following AT must be at least one space or tab.
-	// If this is not the case then there is some error
-	if (*s != ' ' && *s != '\t') {
-		return -EINVAL;
-	}
+		// The next character following AT must be at least one space or tab.
+		// If this is not the case then there is some error
+		if (*s != ' ' && *s != '\t')
+			return -EINVAL;
 
-	// Trim possible multiple whitespace characters after the AT command
-	s = ltrim(s);
+		// Trim possible multiple whitespace characters after the AT command
+		s = ltrim(s);
+	} else {
+		// No AT-prefix found, check if allowed by flag
+		if (!(flags & AT_FLAG_PARSER_ALLOW_NO_PREFIX))
+			return -EINVAL;
+	}
 
 	// This will be the start of our command
 	char *command = s;
 	char *param = NULL;
 
 	// Find the end of the command
-	while (*s != '\0' && *s != ' ' && *s != '\t') {
+	while (*s != '\0' && *s != ' ' && *s != '\t')
 		s++;
-	}
 
 	// Check if this is the end, otherwise extract the parameter string
 	if (*s == '\0') {
@@ -333,6 +313,44 @@ int at_handle_line_mut(char *s)
 			break;
 	};
 
+	*out_cmd = cmd;
+	*out_cmd_param = cmd_param;
+
+	return 0;
+}
+
+int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags)
+{
+	if (!s || !*s || !out_cmd || !out_cmd_param)
+		return -EINVAL;
+
+	size_t len = strlen(s);
+	if (len > AT_LINE_MAX)
+		return -EMSGSIZE;
+
+	char buf[AT_LINE_MAX + 1];
+	memcpy(buf, s, len + 1);
+
+	return at_parse_line_inplace(buf, out_cmd, out_cmd_param, flags);
+}
+
+
+int at_handle_line_inplace(char *s, uint32_t flags)
+{
+	const struct at_cmd *cmd = NULL;
+	struct at_cmd_param cmd_param = { 0 };
+
+	int ret = at_parse_line_inplace(s, &cmd, &cmd_param, flags);
+	if (ret < 0) {
+		LOG_ERR("Failed to parse line: <%s>", s);
+		return ret;
+	}
+
+	if (cmd == NULL) {
+		at_reply("OK");
+		return 0;
+	}
+
 	// TODO: Move this to the `at_dispatch_internal()` handler, and think about locking and other
 	// weird edge cases.
 	// TODO: Make use of the `button_manager_arm()` API or so.
@@ -343,6 +361,21 @@ int at_handle_line_mut(char *s)
 	}
 
 	return at_dispatch_internal(cmd, &cmd_param);
+}
+
+int at_handle_line_copy(const char *s, uint32_t flags)
+{
+	if (!s || !*s)
+		return -EINVAL;
+
+	size_t len = strlen(s);
+	if (len > AT_LINE_MAX)
+		return -EMSGSIZE;
+
+	char buf[AT_LINE_MAX + 1];
+	memcpy(buf, s, len + 1);
+
+	return at_handle_line_inplace(buf, flags);
 }
 
 static inline int at_putn(const char *s, size_t len)
