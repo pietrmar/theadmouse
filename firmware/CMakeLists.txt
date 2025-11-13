@@ -9,6 +9,7 @@ target_sources(app PRIVATE
 		src/at_cmd.c
 		src/button_manager.c
 		src/cmd_uart.c
+		src/slot_manager.c
 		src/telemetry_uart.c
 
 		src/MadgwickAHRS/MadgwickAHRS.c
