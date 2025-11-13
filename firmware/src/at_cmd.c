@@ -334,6 +334,45 @@ int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_c
 	return at_parse_line_inplace(buf, out_cmd, out_cmd_param, flags);
 }
 
+// TODO: How to handle the formatting of `AT_PARAM_UINT` if we want a different radix?
+int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const struct at_cmd_param *param)
+{
+	int ret;
+
+	if (!out_buf || buf_len == 0 || !param) {
+		return -EINVAL;
+	}
+
+	// TODO: Check if `code` is actually in our table and check if the type form the table matches `param->type`
+	char atbuf[3];
+	switch (param->type) {
+		case AT_PARAM_NONE:
+			ret = snprintf(out_buf, buf_len, "AT %s", at_code_to_str(code, atbuf));
+			break;
+		case AT_PARAM_INT:
+			ret = snprintf(out_buf, buf_len, "AT %s %d", at_code_to_str(code, atbuf), param->val.i);
+			break;
+		case AT_PARAM_UINT:
+			ret = snprintf(out_buf, buf_len, "AT %s %u", at_code_to_str(code, atbuf), param->val.ui);
+			break;
+		case AT_PARAM_STR:
+			ret = snprintf(out_buf, buf_len, "AT %s %s", at_code_to_str(code, atbuf), param->val.s);
+			break;
+		default:
+			LOG_WRN("Unhandled param type %d", param->type);
+			return -EINVAL;
+			break;
+	}
+
+	if (ret < 0 || ret >= buf_len) {
+		ret = ret < 0 ? ret : -EMSGSIZE;
+
+		LOG_ERR("Failed to format AT command: %d", ret);
+		return ret;
+	}
+
+	return 0;
+}
 
 int at_handle_line_inplace(char *s, uint32_t flags)
 {
