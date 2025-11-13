@@ -16,6 +16,8 @@ enum at_param_type {
 
 // TODO: The string parameter is usually short, think about inlining a few bytes
 // and only fallback to a pointer if the parameter is actually longer.
+// TODO: Consider making the enum an `uint8_t` adding a `uint8_t flags` with
+// at least one flag to indicate a heap string.
 struct at_cmd_param {
 	enum at_param_type type;
 
