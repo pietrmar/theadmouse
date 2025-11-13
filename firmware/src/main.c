@@ -519,7 +519,7 @@ static int lis2mdl_init()
 	return 0;
 }
 
-static int led_set_rgb(int r, int g, int b)
+int led_set_rgb(int r, int g, int b)
 {
 	static const struct led_dt_spec red = LED_DT_SPEC_GET(DT_ALIAS(red_pwm_led));
 	static const struct led_dt_spec green = LED_DT_SPEC_GET(DT_ALIAS(green_pwm_led));
