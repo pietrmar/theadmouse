@@ -15,6 +15,7 @@
 #include "at_cmd.h"
 #include "cmd_uart.h"
 #include "button_manager.h"
+#include "slot_manager.h"
 
 LOG_MODULE_REGISTER(at, LOG_LEVEL_DBG);
 
@@ -26,36 +27,7 @@ static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 
 static int at_cmd_LA(const struct at_cmd_param *arg, void *ctx)
 {
-	// HACK: Just return some dummy data for now to make the WebGUI happy
-	LOG_WRN("AT LA not implemented, returning dummy data");
-
-	at_reply("Slot:mouse");
-	at_reply("AT SC 0x00ffff");
-	at_reply("AT SB 2");
-	at_reply("AT AX 60");
-	at_reply("AT AY 60");
-	at_reply("AT DX 20");
-	at_reply("AT DY 20");
-	at_reply("AT MS 50");
-	at_reply("AT AC 50");
-	at_reply("AT TS 500");
-	at_reply("AT TP 525");
-	at_reply("AT SP 700");
-	at_reply("AT SS 300");
-	at_reply("AT MM 1");
-	at_reply("AT RO 0");
-	at_reply("AT BT 1");
-	at_reply("AT BM 1");
-	at_reply("AT KP KEY_UP");
-	at_reply("AT BM 2");
-	at_reply("AT KP KEY_DOWN");
-	at_reply("AT BM 3");
-	at_reply("AT KP KEY_LEFT");
-	at_reply("AT BM 4");
-	at_reply("AT KP KEY_RIGHT");
-	at_reply("END");
-
-	return 0;
+	return slot_manager_dump_all_slots(at_replyf);
 }
 
 enum mouse_axis {
