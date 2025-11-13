@@ -86,7 +86,7 @@ static inline int at_param_get_uint(const struct at_cmd_param *p, uint32_t *out)
 	return 0;
 }
 
-static inline int at_param_get_str(const struct at_cmd_param *p, char **out)
+static inline int at_param_get_str(const struct at_cmd_param *p, const char **out)
 {
 	if (!p || !out) return -ENODATA;
 	if (p->type != AT_PARAM_STR) return -EINVAL;
