@@ -397,6 +397,11 @@ int at_handle_line_copy(const char *s, uint32_t flags)
 	return at_handle_line_inplace(buf, flags);
 }
 
+
+// TODO: The `at_putn()`/`at_reply*()` functions should only be used from AT command
+// callbacks.
+// TODO: We should execute callbacks in a single thread from a queue which
+// will ensure that no `at_putn()`/`at_reply*()` calls are interleaved.
 static inline int at_putn(const char *s, size_t len)
 {
 	if (!s) {
