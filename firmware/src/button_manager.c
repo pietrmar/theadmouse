@@ -31,6 +31,24 @@ static struct button_mapping btn_map[] = {
 
 const size_t button_manager_num_buttons = ARRAY_SIZE(btn_map);
 
+int button_manager_get_mapping(size_t idx, uint16_t *at_code, struct at_cmd_param **at_param)
+{
+	if (!button_manager_valid_index(idx)) {
+		LOG_WRN("Button index %d out of range", idx);
+		return -EINVAL;
+	}
+
+	struct button_mapping *mapping = &btn_map[idx];
+	if (!mapping->valid) {
+		return -ENOENT;
+	}
+
+	*at_code = mapping->at_code;
+	*at_param = mapping->at_param;
+
+	return 0;
+}
+
 int button_manager_set_mapping(size_t idx, const uint16_t at_code, const struct at_cmd_param *at_param)
 {
 	char buf[3];
