@@ -309,7 +309,7 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 			cmd_param.val.s = param;
 			break;
 		default:
-			LOG_WRN("Unhandled param_type %d", cmd->param_type);
+			LOG_WRN("Unhandled param type %d", cmd->param_type);
 			break;
 	};
 
