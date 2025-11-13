@@ -296,6 +296,8 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 
 	struct at_cmd_param cmd_param = { .type = cmd->param_type };
 
+	// TODO: Consider not using automatic radix detection when using `strtol()`
+	// and `strtoul()` and instead maybe have a flag in the command table or so.
 	switch (cmd->param_type) {
 		case AT_PARAM_NONE:
 			break;

@@ -7,6 +7,8 @@
 
 #define AT_FLAG_PARSER_ALLOW_NO_PREFIX		(1 << 0)
 
+// TODO: Maybe have some param flags like `AT_PARAM_RADIX_HEX`, `AT_PARAM_RADIX_DEC`, etc.
+
 enum at_param_type {
 	AT_PARAM_NONE = 0,
 	AT_PARAM_INT,
