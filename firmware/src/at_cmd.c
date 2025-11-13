@@ -30,9 +30,69 @@ static int at_cmd_NC(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+static int at_cmd_SC(const struct at_cmd_param *arg, void *ctx)
+{
+	uint32_t col;
+
+	int ret = at_param_get_uint(arg, &col);
+	if (ret < 0)
+		return ret;
+
+	return slot_manager_set_color(col);
+}
+
+static int at_cmd_NE(const struct at_cmd_param *arg, void *ctx)
+{
+	return slot_manager_load_next_slot();
+}
+
+static int at_cmd_SA(const struct at_cmd_param *arg, void *ctx)
+{
+	const char *s;
+
+	int ret = at_param_get_str(arg, &s);
+	if (ret < 0)
+		return ret;
+
+
+	ret = slot_manager_save_current_slot_by_name(s);
+	if (ret < 0)
+		return ret;
+
+	at_reply("OK");
+	return 0;
+}
+
+static int at_cmd_LO(const struct at_cmd_param *arg, void *ctx)
+{
+	const char *s;
+
+	int ret = at_param_get_str(arg, &s);
+	if (ret < 0)
+		return ret;
+
+	ret = slot_manager_load_slot_by_name(s);
+	if (ret < 0)
+		return ret;
+
+	at_reply("OK");
+	return 0;
+}
+
 static int at_cmd_LA(const struct at_cmd_param *arg, void *ctx)
 {
 	return slot_manager_dump_all_slots(at_replyf);
+}
+
+static int at_cmd_LI(const struct at_cmd_param *arg, void *ctx)
+{
+	int ret = slot_manager_list_all_slots(at_replyf);
+	if (ret < 0) {
+		return ret;
+	}
+
+	at_reply("OK");
+	return 0;
 }
 
 enum mouse_axis {
@@ -96,7 +156,13 @@ static const struct at_cmd at_cmds[] = {
 
 	{ MAKE2CC(BM), AT_PARAM_UINT, at_cmd_BM, NULL },
 
+	{ MAKE2CC(SC), AT_PARAM_UINT, at_cmd_SC, NULL },
+
+	{ MAKE2CC(SA), AT_PARAM_STR, at_cmd_SA, NULL },
+	{ MAKE2CC(LO), AT_PARAM_STR, at_cmd_LO, NULL },
 	{ MAKE2CC(LA), AT_PARAM_NONE, at_cmd_LA, NULL },
+	{ MAKE2CC(LI), AT_PARAM_NONE, at_cmd_LI, NULL },
+	{ MAKE2CC(NE), AT_PARAM_NONE, at_cmd_NE, NULL },
 };
 
 static const struct at_cmd *find_at_cmd(const uint16_t code)
