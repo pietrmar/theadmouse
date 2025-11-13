@@ -586,16 +586,6 @@ int main(void)
 		LOG_ERR("BLE initialization failed");
 	}
 
-	ret = lsm6dsl_init();
-	if (ret < 0) {
-		LOG_ERR("lsm6dsl initialization failed");
-	}
-
-	ret = lis2mdl_init();
-	if (ret < 0) {
-		LOG_ERR("lsm6dsl initialization failed");
-	}
-
 	ret = telemetry_uart_init();
 	if (ret < 0) {
 		LOG_ERR("telemetry uart initialization failed");
@@ -609,6 +599,16 @@ int main(void)
 	ret = cmd_uart_init();
 	if (ret < 0) {
 		LOG_ERR("cmd uart initialization failed");
+	}
+
+	ret = lsm6dsl_init();
+	if (ret < 0) {
+		LOG_ERR("lsm6dsl initialization failed");
+	}
+
+	ret = lis2mdl_init();
+	if (ret < 0) {
+		LOG_ERR("lsm6dsl initialization failed");
 	}
 
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
