@@ -11,7 +11,22 @@
 
 LOG_MODULE_REGISTER(slot_manager, LOG_LEVEL_DBG);
 
+// TODO: This is currently implemented similar like on the FABI where
+// we store the AT commands in plain-text and each slot corresponds
+// to a file. We should consider making the on-disk storage more compact
+// and have some in-ram look-up table, to not need to walk through
+// the file-system when we want to do trivial operations like
+// check where a slot is stored and such.
+
 static struct slot_settings active_slot;
+static int active_slot_index = -1;
+
+
+int slot_manager_set_color(uint32_t col)
+{
+	active_slot.color = col;
+	return 0;
+}
 
 // NOTE: This does not create directories recursively, but we
 // do not want a deep hieararchy anyway as directories are
@@ -70,6 +85,8 @@ static int file_printf(struct fs_file_t *f, const char *fmt, ...)
 	return (int)bytes_written;
 }
 
+// Reads a line from file **not including** the newline
+// TODO: Does not handle truncated lines that are longer than `len`
 static int read_line_from_file(char *buf, size_t len, struct fs_file_t *file)
 {
 	if (len == 0)
@@ -96,6 +113,147 @@ static int read_line_from_file(char *buf, size_t len, struct fs_file_t *file)
 	}
 
 	buf[i] = '\0';
+	return 0;
+}
+
+int slot_manager_get_next_free_index(void)
+{
+	for (size_t i = 0; i < SLOT_MANAGER_MAX_SLOTS; i++){
+		char buf[MAX_PATH_LEN + 1];
+
+		int ret = snprintf(buf, sizeof(buf), "%s/slots_%02u/%02u",
+					SLOT_MANAGER_BASE_PATH, SLOT_MANAGER_SCHEMA_VERSION, i);
+		if (ret < 0 || ret >= sizeof(buf)) {
+			ret = ret < 0 ? ret : -ENAMETOOLONG;
+
+			LOG_ERR("Failed to format slot path: %d", ret);
+			return ret;
+		}
+
+
+		struct fs_dirent entry;
+		ret = fs_stat(buf, &entry);
+
+		if (ret == -ENOENT)
+			return i;
+
+		if (ret < 0)
+			return ret;
+	}
+
+	return -ENOSPC;
+}
+
+static int slot_manager_get_slot_index_by_name(const char *name)
+{
+	for (size_t i = 0; i < SLOT_MANAGER_MAX_SLOTS; i++){
+		char buf[MAX_PATH_LEN + 1];
+
+		int ret = snprintf(buf, sizeof(buf), "%s/slots_%02u/%02u",
+					SLOT_MANAGER_BASE_PATH, SLOT_MANAGER_SCHEMA_VERSION, i);
+		if (ret < 0 || ret >= sizeof(buf)) {
+			ret = ret < 0 ? ret : -ENAMETOOLONG;
+
+			LOG_ERR("Failed to format slot path: %d", ret);
+			return ret;
+		}
+
+
+		struct fs_file_t f;
+		fs_file_t_init(&f);
+
+		ret = fs_open(&f, buf, FS_O_READ);
+		if (ret == -ENOENT) {
+			// If the file is not found then we've reached the last slot
+			// and break out of the look.
+			break;
+		}
+
+		// Other error
+		if (ret < 0) {
+			LOG_ERR("Failed to open %s: %d", buf, ret);
+			return ret;
+		}
+
+		ret = read_line_from_file(buf, sizeof(buf), &f);
+
+		// TODO: Is this the correct way to handle this?
+		if (ret == EOF) {
+			LOG_ERR("File for slot %d is empty", i);
+			fs_close(&f);
+			return ret;
+		}
+
+		if (ret < 0) {
+			fs_close(&f);
+			return ret;
+		}
+
+		fs_close(&f);
+
+		if (strcmp(buf, name) == 0) {
+			return i;
+		}
+	}
+
+	return -ENOENT;
+}
+
+int slot_manager_list_all_slots(slot_printf_fn printf_fn)
+{
+	for (size_t i = 0; i < SLOT_MANAGER_MAX_SLOTS; i++){
+		char buf[MAX_PATH_LEN + 1];
+
+		int ret = snprintf(buf, sizeof(buf), "%s/slots_%02u/%02u",
+					SLOT_MANAGER_BASE_PATH, SLOT_MANAGER_SCHEMA_VERSION, i);
+		if (ret < 0 || ret >= sizeof(buf)) {
+			ret = ret < 0 ? ret : -ENAMETOOLONG;
+
+			LOG_ERR("Failed to format slot path: %d", ret);
+			return ret;
+		}
+
+
+		struct fs_file_t f;
+		fs_file_t_init(&f);
+
+		ret = fs_open(&f, buf, FS_O_READ);
+		if (ret == -ENOENT) {
+			// If the file is not found then we've reached the last slot
+			// and break out of the look.
+			break;
+		}
+
+		// Other error
+		if (ret < 0) {
+			LOG_ERR("Failed to open %s: %d", buf, ret);
+			return ret;
+		}
+
+		ret = read_line_from_file(buf, sizeof(buf), &f);
+
+		// TODO: Is this the correct way to handle this?
+		if (ret == EOF) {
+			LOG_ERR("File for slot %d is empty", i);
+			fs_close(&f);
+			return ret;
+		}
+
+		if (ret < 0) {
+			fs_close(&f);
+			return ret;
+		}
+
+		ret = printf_fn("Slot%d:%s", i + 1, buf);
+
+		if (ret < 0) {
+			fs_close(&f);
+			return ret;
+		}
+
+		fs_close(&f);
+	}
+
 	return 0;
 }
 
@@ -166,7 +324,7 @@ int slot_manager_dump_all_slots(slot_printf_fn printf_fn)
 // that are needed to restore the slot state. In the future maybe we could use
 // a more compact reprensentation in the flash instead of just duming the ASCII
 // AT commands to a file.
-static int save_current_slot(int idx, const char *name)
+static int save_current_slot_by_index(int idx, const char *name)
 {
 	if (idx < 0 || idx >= SLOT_MANAGER_MAX_SLOTS) {
 		return -EINVAL;
@@ -196,7 +354,7 @@ static int save_current_slot(int idx, const char *name)
 	file_printf(&f, "%s\n", name);
 
 	// Serialize the current settings
-	file_printf(&f, "AT SC 0x%06x\n", active_slot.led_color);
+	file_printf(&f, "AT SC 0x%06x\n", active_slot.color);
 
 	// Serialize the current button configuration
 	for (size_t i = 0; i < button_manager_get_num_buttons(); i++) {
@@ -224,9 +382,127 @@ static int save_current_slot(int idx, const char *name)
 	return ret;
 }
 
-static void reset_slot(struct slot_settings *slot)
+int slot_manager_save_current_slot_by_name(const char *name)
 {
-	slot->led_color = 0x00000000;
+	int ret = slot_manager_get_slot_index_by_name(name);
+	if (ret < 0 && ret != -ENOENT)
+		return ret;
+
+	if (ret == -ENOENT) {
+		ret = slot_manager_get_next_free_index();
+		if (ret < 0)
+			return ret;
+	}
+
+	return save_current_slot_by_index(ret, name);
+}
+
+
+// HACK: This is just for quick testing
+extern int led_set_rgb(int r, int g, int b);
+
+static int load_slot_by_index(int idx)
+{
+	if (idx < 0 || idx >= SLOT_MANAGER_MAX_SLOTS) {
+		return -EINVAL;
+	}
+
+	char buf[MAX_PATH_LEN + 1];
+	int ret = snprintf(buf, sizeof(buf), "%s/slots_%02u/%02u",
+				SLOT_MANAGER_BASE_PATH, SLOT_MANAGER_SCHEMA_VERSION, idx);
+
+	if (ret < 0 || ret >= sizeof(buf)) {
+		ret = ret < 0 ? ret : -ENAMETOOLONG;
+
+		LOG_ERR("Failed to format slot path: %d", ret);
+		return ret;
+	}
+
+	struct fs_file_t f;
+	fs_file_t_init(&f);
+
+	ret = fs_open(&f, buf, FS_O_READ);
+	if (ret < 0) {
+		LOG_ERR("Failed to open %s: %d", buf, ret);
+		return ret;
+	}
+
+
+	bool first_line = true;
+	while (true) {
+		ret = read_line_from_file(buf, sizeof(buf), &f);
+
+		if (ret == EOF)
+			break;
+
+		if (ret < 0) {
+			fs_close(&f);
+			return ret;
+		}
+
+		if (first_line) {
+			LOG_INF("Loading slot: %s", buf);
+			first_line = false;
+		} else {
+			ret = at_handle_line_inplace(buf, 0);
+			if (ret < 0) {
+				fs_close(&f);
+				return ret;
+			}
+		}
+	}
+
+	fs_close(&f);
+
+	active_slot_index = idx;
+
+	int r = (active_slot.color >> 16) & 0xFF;
+	int g = (active_slot.color >>  8) & 0xFF;
+	int b = (active_slot.color >>  0) & 0xFF;
+
+	// Scale from 0-255 to a percentage value of 0-100 as this
+	// is what the `led_set_rgb()` API expects.
+	r = (r * 100 + 127) / 255;
+	g = (g * 100 + 127) / 255;
+	b = (b * 100 + 127) / 255;
+
+	// This is also just a quick HACK here
+	ret = led_set_rgb(r, g, b);
+
+	return ret;
+}
+
+int slot_manager_load_slot_by_name(const char *name)
+{
+	int ret = slot_manager_get_slot_index_by_name(name);
+	if (ret < 0)
+		return ret;
+
+	return load_slot_by_index(ret);
+}
+
+int slot_manager_load_next_slot(void)
+{
+	if (active_slot_index < 0)
+		return -EINVAL;
+
+	int new_index = active_slot_index + 1;
+
+	int next_free = slot_manager_get_next_free_index();
+
+	if (next_free < 0 || (next_free > 0 && new_index >= next_free)) {
+		new_index = 0;
+	}
+
+	LOG_INF("Loading next slot with index: %d", new_index);
+
+	return load_slot_by_index(new_index);
+}
+
+static void reset_active_slot(void)
+{
+	active_slot.color = 0x00000000;
+	// TODO: Also maybe call into button manager to reset all mappings
 }
 
 int slot_manager_init(void)
@@ -247,23 +523,29 @@ int slot_manager_init(void)
 		return ret;
 	}
 
-	// TODO: For now create some dummy slots for testing in the filesystem
-	active_slot.led_color = 0x00FF0000;
-	save_current_slot(0, "test 0");
-	active_slot.led_color = 0x0000FF00;
-	save_current_slot(1, "test 1");
-	active_slot.led_color = 0x000000FF;
-	save_current_slot(2, "test 2");
-	active_slot.led_color = 0x00FF0000;
-	save_current_slot(3, "test 3");
-	active_slot.led_color = 0x0000FF00;
-	save_current_slot(4, "test 4");
-	active_slot.led_color = 0x000000FF;
-	save_current_slot(5, "test 5");
-	active_slot.led_color = 0x00FF0000;
-	save_current_slot(6, "test 6");
-	active_slot.led_color = 0x0000FF00;
-	save_current_slot(7, "test 7");
+	ret = slot_manager_get_next_free_index();
+	if (ret < 0 && ret != -ENOSPC) {
+		LOG_ERR("Failed to get next free slot index: %d", ret);
+		return ret;
+	}
+
+	if (ret == 0) {
+		LOG_INF("Creating empty default slot");
+
+		reset_active_slot();
+
+		ret = save_current_slot_by_index(0, "default");
+		if (ret < 0) {
+			LOG_ERR("Failed to create empty default slot: %d", ret);
+			return ret;
+		}
+	}
+
+	ret = load_slot_by_index(0);
+	if (ret < 0) {
+		LOG_ERR("Failed to load slot 0");
+		return ret;
+	}
 
 	return 0;
 }
