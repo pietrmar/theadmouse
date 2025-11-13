@@ -21,6 +21,7 @@
 #include <math.h>
 
 #include "button_manager.h"
+#include "slot_manager.h"
 #include "telemetry_uart.h"
 #include "cmd_uart.h"
 #include "at_cmd.h"
@@ -574,6 +575,11 @@ int main(void)
 	}
 
 	LOG_INF("Tina was here ^_^");
+
+	ret = slot_manager_init();
+	if (ret < 0) {
+		LOG_ERR("Slot manager initialization failed");
+	}
 
 	ret = ble_init();
 	if (ret < 0) {
