@@ -6,13 +6,13 @@ boot:
   region: flash_primary
 app:
   address: 0xc000
-  end_address: 0xf8000
-  size: 0xec000
+  end_address: 0xe0000
+  size: 0xd4000
   region: flash_primary
 littlefs_storage:
-  address: 0xf8000
+  address: 0xe0000
   end_address: 0x100000
-  size: 0x8000
+  size: 0x20000
   region: flash_primary
 sram_primary:
   address: 0x20000000

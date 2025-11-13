@@ -35,12 +35,12 @@
 
 		app_partition: partition@c000 {
 			label = "app";
-			reg = <0x0000C000 0x000EC000>;
+			reg = <0x0000C000 0x000D4000>;
 		};
 
-		littlefs_storage_partition: partition@f8000 {
+		littlefs_storage_partition: partition@e0000 {
 			label = "littlefs_storage";
-			reg = <0x000F8000 0x00008000>;
+			reg = <0x000E0000 0x00020000>;
 		};
 	};
 };
