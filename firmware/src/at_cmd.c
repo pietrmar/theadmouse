@@ -25,6 +25,11 @@ static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+static int at_cmd_NC(const struct at_cmd_param *arg, void *ctx)
+{
+	return 0;
+}
+
 static int at_cmd_LA(const struct at_cmd_param *arg, void *ctx)
 {
 	return slot_manager_dump_all_slots(at_replyf);
@@ -84,6 +89,7 @@ static int at_cmd_BM(const struct at_cmd_param *arg, void *ctx)
 
 static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(ID), AT_PARAM_NONE, at_cmd_ID, NULL },
+	{ MAKE2CC(NC), AT_PARAM_NONE, at_cmd_NC, NULL },
 
 	{ MAKE2CC(MX), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
 	{ MAKE2CC(MY), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
