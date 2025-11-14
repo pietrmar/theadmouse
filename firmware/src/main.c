@@ -29,8 +29,6 @@
 #include "hog.h"
 #include "MadgwickAHRS/MadgwickAHRS.h"
 
-// #define THEADMOUSE_NUS_DEBUG
-
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
 
 static const struct bt_data le_adv[] = {
@@ -38,10 +36,6 @@ static const struct bt_data le_adv[] = {
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
 			BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
 			BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
-
-#if defined(THEADMOUSE_NUS_DEBUG)
-	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_SRV_VAL),
-#endif
 };
 
 // Not `const` because we want to change the name before starting the advertisement
@@ -308,43 +302,6 @@ void telemetry_timer_handler(struct k_timer *timer)
 	k_work_submit(&telemetry_work);
 }
 K_TIMER_DEFINE(telemetry_timer, telemetry_timer_handler, NULL);
-
-#if defined(THEADMOUSE_NUS_DEBUG)
-void nus_debug_handler(struct k_work *work)
-{
-	struct imu_quat cur_quat;
-	int ret = imu_get_last_quat(&cur_quat);
-	if (ret < 0) {
-		LOG_ERR("failed to get last quaternion");
-		return;
-	}
-
-	float *q = cur_quat.q;
-	int16_t q_fixed[4];
-	for (int i = 0; i < 4; i++) {
-		q_fixed[i] = (int16_t)(q[i] * 10000);  // scale to fit -1.0 to 1.0 as -10000 to 10000
-	}
-
-	uint8_t payload[8];
-	payload[0] = q_fixed[0] & 0xFF;
-	payload[1] = q_fixed[0] >> 8;
-	payload[2] = q_fixed[1] & 0xFF;
-	payload[3] = q_fixed[1] >> 8;
-	payload[4] = q_fixed[2] & 0xFF;
-	payload[5] = q_fixed[2] >> 8;
-	payload[6] = q_fixed[3] & 0xFF;
-	payload[7] = q_fixed[3] >> 8;
-
-	bt_nus_send(NULL, &payload, sizeof(payload));
-}
-K_WORK_DEFINE(nus_debug_work, nus_debug_handler);
-
-void nus_debug_timer_handler(struct k_timer *timer)
-{
-	k_work_submit(&nus_debug_work);
-}
-K_TIMER_DEFINE(nus_debug_timer, nus_debug_timer_handler, NULL);
-#endif
 
 void mag_update_handler(struct k_work *work)
 {
@@ -614,10 +571,6 @@ int main(void)
 	k_timer_start(&hid_timer, K_MSEC(0), K_MSEC(10));
 	k_timer_start(&mag_update_timer, K_MSEC(0), K_MSEC(10));
 	k_timer_start(&telemetry_timer, K_MSEC(0), K_MSEC(25));
-
-#if defined(THEADMOUSE_NUS_DEBUG)
-	k_timer_start(&nus_debug_timer, K_MSEC(0), K_MSEC(25));
-#endif
 
 	while (true) {
 		k_msleep(1000);
