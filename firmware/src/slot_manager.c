@@ -444,10 +444,23 @@ static int load_slot_by_index(int idx)
 			LOG_INF("Loading slot: %s", buf);
 			first_line = false;
 		} else {
-			ret = at_handle_line_inplace(buf, 0);
+			const struct at_cmd *cmd = NULL;
+			struct at_cmd_param cmd_param = { 0 };
+
+			LOG_DBG("Parsing line: <%s>", buf);
+			int ret = at_parse_line_inplace(buf, &cmd, &cmd_param, 0);
 			if (ret < 0) {
-				fs_close(&f);
-				return ret;
+				LOG_ERR("Failed to parse line: %d", ret);
+				continue;
+			}
+
+			if (cmd == NULL)
+				continue;
+
+			ret = at_cmd_dispatch_ptr(cmd, &cmd_param);
+			if (ret < 0) {
+				LOG_ERR("Failed to dispatch line: %d", ret);
+				continue;
 			}
 		}
 	}
