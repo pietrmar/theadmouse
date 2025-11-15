@@ -44,6 +44,8 @@ static int at_cmd_SC(const struct at_cmd_param *arg, void *ctx)
 
 static int at_cmd_NE(const struct at_cmd_param *arg, void *ctx)
 {
+	// NOTE: The slot manager will directly dispatch AT commands
+	// bypassing the queue.
 	return slot_manager_load_next_slot();
 }
 
@@ -72,6 +74,8 @@ static int at_cmd_LO(const struct at_cmd_param *arg, void *ctx)
 	if (ret < 0)
 		return ret;
 
+	// NOTE: The slot manager will directly dispatch AT commands
+	// bypassing the queue.
 	ret = slot_manager_load_slot_by_name(s);
 	if (ret < 0)
 		return ret;
@@ -204,44 +208,80 @@ static inline char *rtrim(char *p)
 	return p;
 }
 
-// TODO: Consider reworking this without a mutex but instead queueing
-// up commands. However we would need to make a copy of cmd + param.
-// The `at_cmd_param_clone()` will do a heap alloc so maybe we do not
-// want that.
-// Consider rewriting `at_cmd_param` to make use of string inlining for
-// short strings and use a slab allocator for longer strings.
-static K_MUTEX_DEFINE(at_dispatch_lock);
-static int at_dispatch_internal(const struct at_cmd *cmd, const struct at_cmd_param *param)
+struct at_cmd_work_item {
+	const struct at_cmd *cmd;
+	struct at_cmd_param param;
+};
+
+#define AT_CMD_QUEUE_DEPTH 8
+K_MSGQ_DEFINE(at_cmd_queue, sizeof(struct at_cmd_work_item), AT_CMD_QUEUE_DEPTH, 4);
+
+// This does no error checking and assumes that `cmd` and `cmd->cb` is valid
+static int __at_cmd_dispatch_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param)
 {
-	char buf[3];
+	// TODO: Use some kind of "arming" API or so
+	// TODO: We probably want to disallow certain commands to be mapped on buttons
+	if (set_slot_command != -1) {
+		int ret = button_manager_set_mapping(set_slot_command, cmd->code, param);
 
-	if (!cmd || !param)
-		return -EINVAL;
+		if (ret < 0)
+			LOG_ERR("Failed to set button mapping for slot %d: %d", set_slot_command, ret);
 
-	if (k_is_in_isr()) {
-		LOG_ERR("at_dispatch_internal() called from ISR");
-		return -EWOULDBLOCK;
+		set_slot_command = -1;
+		return ret;
 	}
 
+	return cmd->cb(param, cmd->ctx);
+}
+
+static void at_cmd_thread(void *p1, void *p2, void *p3)
+{
+	ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
+
+	LOG_INF("Started AT dispatch thread");
+
+	while (true) {
+		struct at_cmd_work_item work_item;
+		int ret = k_msgq_get(&at_cmd_queue, &work_item, K_FOREVER);
+		if (ret < 0)
+			continue;
+
+		char buf[3];
+		LOG_DBG("Dispatching <%s>", at_code_to_str(work_item.cmd->code, buf));
+
+		// TODO: Can we even do something with the return value here?
+		ret = __at_cmd_dispatch_ptr(work_item.cmd, &work_item.param);
+		if (ret < 0)
+			LOG_DBG("AT command <%s> failed: %d", at_code_to_str(work_item.cmd->code, buf), ret);
+	}
+}
+K_THREAD_DEFINE(at_cmd_tid, 2048, at_cmd_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, 0);
+
+int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout)
+{
 	if (!cmd->cb) {
+		char buf[3];
 		// Do not fail here fully but print a warning
 		LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(cmd->code, buf));
 		return 0;
 	}
 
+	struct at_cmd_work_item work_item = {
+		.cmd = cmd,
+		.param = *param,
+	};
 
-	k_mutex_lock(&at_dispatch_lock, K_FOREVER);
+	int ret = k_msgq_put(&at_cmd_queue, &work_item, timeout);
+	if (ret < 0) {
+		char buf[3];
+		LOG_ERR("Failed to enqueue AT command <%s>: %d", at_code_to_str(cmd->code, buf), ret);
+		return ret;
+	}
 
-	// TODO: Print/log the parameter too
-	LOG_DBG("Dispatching <%s>", at_code_to_str(cmd->code, buf));
-	int ret = cmd->cb(param, cmd->ctx);
-
-	k_mutex_unlock(&at_dispatch_lock);
-
-	return ret;
+	return 0;
 }
 
-int at_dispatch_cmd(const uint16_t code, const struct at_cmd_param *param)
+int at_cmd_enqueue_code(const uint16_t code, const struct at_cmd_param *param, k_timeout_t timeout)
 {
 	const struct at_cmd *cmd = find_at_cmd(code);
 	if (cmd == NULL) {
@@ -250,7 +290,33 @@ int at_dispatch_cmd(const uint16_t code, const struct at_cmd_param *param)
 		return -ENOTSUP;
 	}
 
-	return at_dispatch_internal(cmd, param);
+	return at_cmd_enqueue_ptr(cmd, param, timeout);
+}
+
+int at_cmd_dispatch_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param)
+{
+	char buf[3];
+
+	if (!cmd->cb) {
+		// Do not fail here fully but print a warning
+		LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(cmd->code, buf));
+		return 0;
+	}
+
+	LOG_DBG("Directly dispatching <%s>", at_code_to_str(cmd->code, buf));
+	return __at_cmd_dispatch_ptr(cmd, param);
+}
+
+int at_cmd_dispatch_code(const uint16_t code, const struct at_cmd_param *param)
+{
+	char buf[3];
+	const struct at_cmd *cmd = find_at_cmd(code);
+	if (cmd == NULL) {
+		LOG_ERR("Could not find AT cmd <%s>", at_code_to_str(code, buf));
+		return -ENOTSUP;
+	}
+
+	return at_cmd_dispatch_ptr(cmd, param);
 }
 
 // NOTE: If we just got a plain AT command without any parameters or so then this will return NULL and `*out_cmd = NULL`.
@@ -458,16 +524,7 @@ int at_handle_line_inplace(char *s, uint32_t flags)
 		return 0;
 	}
 
-	// TODO: Move this to the `at_dispatch_internal()` handler, and think about locking and other
-	// weird edge cases.
-	// TODO: Make use of the `button_manager_arm()` API or so.
-	if (set_slot_command != -1) {
-		int ret = button_manager_set_mapping(set_slot_command, cmd->code, &cmd_param);
-		set_slot_command = -1;
-		return ret;
-	}
-
-	return at_dispatch_internal(cmd, &cmd_param);
+	return at_cmd_enqueue_ptr(cmd, &cmd_param, K_FOREVER);
 }
 
 int at_handle_line_copy(const char *s, uint32_t flags)

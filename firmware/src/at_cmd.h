@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <zephyr/kernel.h>
 
 #include "at_cmd_param.h"
 
@@ -43,9 +44,13 @@ int at_handle_line_copy(const char *s, uint32_t flags);
 int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
 int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
 
-int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const struct at_cmd_param *param);
+int at_cmd_enqueue_code(const uint16_t code, const struct at_cmd_param *param, k_timeout_t timeout);
+int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout);
 
-int at_dispatch_cmd(const uint16_t code, const struct at_cmd_param *param);
+int at_cmd_dispatch_code(const uint16_t code, const struct at_cmd_param *param);
+int at_cmd_dispatch_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param);
+
+int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const struct at_cmd_param *param);
 
 int at_reply(const char *s);
 int at_replyf(const char *fmt, ...);
