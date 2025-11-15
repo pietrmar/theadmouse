@@ -129,11 +129,9 @@ static void on_input(struct input_event *evt, void *user_data)
 		return;
 	}
 
-	// TODO: Right now `at_dispatch_cmd()` can block, so we should not call it from here
-	// and instead enqueue command ... or rewrite `at_dispatch_cmd()` to not block.
-	int ret = at_dispatch_cmd(mapping->at_code, mapping->at_param);
+	int ret = at_cmd_enqueue_code(mapping->at_code, mapping->at_param, K_NO_WAIT);
 	if (ret < 0) {
-		LOG_ERR("Failed to dispatch AT command: %d", ret);
+		LOG_ERR("Failed to enqueue AT command: %d", ret);
 	}
 }
 INPUT_CALLBACK_DEFINE(btn_dev, on_input, NULL);
