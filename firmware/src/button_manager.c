@@ -13,6 +13,8 @@ static const struct device *const btn_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_buttons)
 
 // TODO: We could just use an invalid/impossible `at_code` of `0x00` to indicate an
 // invalid mapping to save space, but I think for now one simple valid flag is fine.
+// TODO: Maybe consider just storing the code + a callback or so and deal with the
+// AT command internals somewhere else.
 struct button_mapping {
 	uint16_t code;
 	bool valid;
