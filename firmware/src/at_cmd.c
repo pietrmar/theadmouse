@@ -13,6 +13,7 @@
 #include <zephyr/logging/log.h>
 
 #include "at_cmd.h"
+#include "at_cmd_param.h"
 #include "cmd_uart.h"
 #include "button_manager.h"
 #include "slot_manager.h"
@@ -34,7 +35,7 @@ static int at_cmd_SC(const struct at_cmd_param *arg, void *ctx)
 {
 	uint32_t col;
 
-	int ret = at_param_get_uint(arg, &col);
+	int ret = at_cmd_param_get_uint(arg, &col);
 	if (ret < 0)
 		return ret;
 
@@ -50,7 +51,7 @@ static int at_cmd_SA(const struct at_cmd_param *arg, void *ctx)
 {
 	const char *s;
 
-	int ret = at_param_get_str(arg, &s);
+	int ret = at_cmd_param_get_str(arg, &s);
 	if (ret < 0)
 		return ret;
 
@@ -67,7 +68,7 @@ static int at_cmd_LO(const struct at_cmd_param *arg, void *ctx)
 {
 	const char *s;
 
-	int ret = at_param_get_str(arg, &s);
+	int ret = at_cmd_param_get_str(arg, &s);
 	if (ret < 0)
 		return ret;
 
@@ -109,7 +110,7 @@ static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 	int d;
 	enum mouse_axis a = (enum mouse_axis)ctx;
 
-	int ret = at_param_get_int(arg, &d);
+	int ret = at_cmd_param_get_int(arg, &d);
 	if (ret < 0)
 		return ret;
 
@@ -131,7 +132,7 @@ static int at_cmd_BM(const struct at_cmd_param *arg, void *ctx)
 {
 	uint32_t btn_idx;
 
-	int ret = at_param_get_uint(arg, &btn_idx);
+	int ret = at_cmd_param_get_uint(arg, &btn_idx);
 	if (ret < 0)
 		return ret;
 
@@ -148,21 +149,21 @@ static int at_cmd_BM(const struct at_cmd_param *arg, void *ctx)
 }
 
 static const struct at_cmd at_cmds[] = {
-	{ MAKE2CC(ID), AT_PARAM_NONE, at_cmd_ID, NULL },
-	{ MAKE2CC(NC), AT_PARAM_NONE, at_cmd_NC, NULL },
+	{ MAKE2CC(ID), AT_CMD_PARAM_TYPE_NONE, at_cmd_ID, NULL },
+	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
 
-	{ MAKE2CC(MX), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
-	{ MAKE2CC(MY), AT_PARAM_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
+	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
+	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
 
-	{ MAKE2CC(BM), AT_PARAM_UINT, at_cmd_BM, NULL },
+	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
-	{ MAKE2CC(SC), AT_PARAM_UINT, at_cmd_SC, NULL },
+	{ MAKE2CC(SC), AT_CMD_PARAM_TYPE_UINT, at_cmd_SC, NULL },
 
-	{ MAKE2CC(SA), AT_PARAM_STR, at_cmd_SA, NULL },
-	{ MAKE2CC(LO), AT_PARAM_STR, at_cmd_LO, NULL },
-	{ MAKE2CC(LA), AT_PARAM_NONE, at_cmd_LA, NULL },
-	{ MAKE2CC(LI), AT_PARAM_NONE, at_cmd_LI, NULL },
-	{ MAKE2CC(NE), AT_PARAM_NONE, at_cmd_NE, NULL },
+	{ MAKE2CC(SA), AT_CMD_PARAM_TYPE_STR, at_cmd_SA, NULL },
+	{ MAKE2CC(LO), AT_CMD_PARAM_TYPE_STR, at_cmd_LO, NULL },
+	{ MAKE2CC(LA), AT_CMD_PARAM_TYPE_NONE, at_cmd_LA, NULL },
+	{ MAKE2CC(LI), AT_CMD_PARAM_TYPE_NONE, at_cmd_LI, NULL },
+	{ MAKE2CC(NE), AT_CMD_PARAM_TYPE_NONE, at_cmd_NE, NULL },
 };
 
 static const struct at_cmd *find_at_cmd(const uint16_t code)
@@ -328,36 +329,42 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 	}
 
 	// Check and print a warning but do not fail if we have extra parameters
-	if (cmd->param_type == AT_PARAM_NONE && param != NULL) {
+	if (cmd->param_type == AT_CMD_PARAM_TYPE_NONE && param != NULL) {
 		LOG_WRN("AT cmd <%s> does not take parameters, ignoring <%s>", command, param);
 	}
 
 	// Fail if a parameter is missing
-	if (cmd->param_type != AT_PARAM_NONE && param == NULL) {
+	if (cmd->param_type != AT_CMD_PARAM_TYPE_NONE && param == NULL) {
 		LOG_WRN("AT cmd <%s> requires a parameter", command);
 		return -EINVAL;
 	}
 
-	struct at_cmd_param cmd_param = { .type = cmd->param_type };
+	struct at_cmd_param cmd_param = { 0 };
 
 	// TODO: Consider not using automatic radix detection when using `strtol()`
 	// and `strtoul()` and instead maybe have a flag in the command table or so.
+	int ret = 0;
 	switch (cmd->param_type) {
-		case AT_PARAM_NONE:
+		case AT_CMD_PARAM_TYPE_NONE:
 			break;
-		case AT_PARAM_INT:
-			cmd_param.val.i = strtol(param, NULL, 0);
+		case AT_CMD_PARAM_TYPE_INT:
+			ret = at_cmd_param_set_int(&cmd_param, strtol(param, NULL, 0));
 			break;
-		case AT_PARAM_UINT:
-			cmd_param.val.ui = strtoul(param, NULL, 0);
+		case AT_CMD_PARAM_TYPE_UINT:
+			ret = at_cmd_param_set_uint(&cmd_param, strtoul(param, NULL, 0));
 			break;
-		case AT_PARAM_STR:
-			cmd_param.val.s = param;
+		case AT_CMD_PARAM_TYPE_STR:
+			ret = at_cmd_param_set_str(&cmd_param, param);
 			break;
 		default:
 			LOG_WRN("Unhandled param type %d", cmd->param_type);
+			return -EINVAL;
 			break;
 	};
+
+	if (ret < 0) {
+		return ret;
+	}
 
 	*out_cmd = cmd;
 	*out_cmd_param = cmd_param;
@@ -380,7 +387,7 @@ int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_c
 	return at_parse_line_inplace(buf, out_cmd, out_cmd_param, flags);
 }
 
-// TODO: How to handle the formatting of `AT_PARAM_UINT` if we want a different radix?
+// TODO: How to handle the formatting of `AT_CMD_PARAM_UINT` if we want a different radix?
 int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const struct at_cmd_param *param)
 {
 	int ret;
@@ -389,23 +396,36 @@ int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const stru
 		return -EINVAL;
 	}
 
+	enum at_cmd_param_type param_type = at_cmd_param_get_type(param);
 	// TODO: Check if `code` is actually in our table and check if the type form the table matches `param->type`
 	char atbuf[3];
-	switch (param->type) {
-		case AT_PARAM_NONE:
+	switch (param_type) {
+		case AT_CMD_PARAM_TYPE_NONE:
 			ret = snprintf(out_buf, buf_len, "AT %s", at_code_to_str(code, atbuf));
 			break;
-		case AT_PARAM_INT:
-			ret = snprintf(out_buf, buf_len, "AT %s %d", at_code_to_str(code, atbuf), param->val.i);
+		case AT_CMD_PARAM_TYPE_INT:
+			int32_t i;
+			ret = at_cmd_param_get_int(param, &i);
+			if (ret < 0)
+				return ret;
+			ret = snprintf(out_buf, buf_len, "AT %s %d", at_code_to_str(code, atbuf), i);
 			break;
-		case AT_PARAM_UINT:
-			ret = snprintf(out_buf, buf_len, "AT %s %u", at_code_to_str(code, atbuf), param->val.ui);
+		case AT_CMD_PARAM_TYPE_UINT:
+			uint32_t ui;
+			ret = at_cmd_param_get_uint(param, &ui);
+			if (ret < 0)
+				return ret;
+			ret = snprintf(out_buf, buf_len, "AT %s %u", at_code_to_str(code, atbuf), ui);
 			break;
-		case AT_PARAM_STR:
-			ret = snprintf(out_buf, buf_len, "AT %s %s", at_code_to_str(code, atbuf), param->val.s);
+		case AT_CMD_PARAM_TYPE_STR:
+			const char *s;
+			ret = at_cmd_param_get_str(param, &s);
+			if (ret < 0)
+				return ret;
+			ret = snprintf(out_buf, buf_len, "AT %s %s", at_code_to_str(code, atbuf), s);
 			break;
 		default:
-			LOG_WRN("Unhandled param type %d", param->type);
+			LOG_WRN("Unhandled param type %d", param_type);
 			return -EINVAL;
 			break;
 	}
@@ -427,7 +447,9 @@ int at_handle_line_inplace(char *s, uint32_t flags)
 
 	int ret = at_parse_line_inplace(s, &cmd, &cmd_param, flags);
 	if (ret < 0) {
-		LOG_ERR("Failed to parse line: <%s>", s);
+		// Since we used the `_inplace()` variant the buffer was
+		// modified so we cannot print the whole line here anymore
+		LOG_ERR("Failed to parse line: %d", ret);
 		return ret;
 	}
 
@@ -529,55 +551,4 @@ int at_replyf(const char *fmt, ...)
 	}
 
 	return at_replyn(buf, n);
-}
-
-struct at_cmd_param *at_cmd_param_clone(const struct at_cmd_param *param)
-{
-	if (param == NULL)
-		return NULL;
-
-	struct at_cmd_param *np = k_malloc(sizeof(*param));
-	if (np == NULL)
-		return NULL;
-
-	// Copy the type
-	np->type = param->type;
-
-	// Copy the value (allocate space for the string parameter if needed)
-	switch (np->type) {
-		case AT_PARAM_NONE:
-			break;
-		case AT_PARAM_INT:
-			np->val.i = param->val.i;
-			break;
-		case AT_PARAM_UINT:
-			np->val.ui = param->val.ui;
-			break;
-		case AT_PARAM_STR:
-			size_t len = strlen(param->val.s) + 1;
-			np->val.s = k_malloc(len);
-			if (!np->val.s) {
-				k_free(np);
-				return NULL;
-			}
-			memcpy(np->val.s, param->val.s, len);
-			break;
-		default:
-			LOG_WRN("Unknown param type %d", param->type);
-			break;
-	}
-
-	return np;
-}
-
-// TODO: Do not use `k_malloc()`/`k_free()` and instead use slab alloc
-void at_cmd_param_free(struct at_cmd_param *param)
-{
-	if (param == NULL)
-		return;
-
-	if (param->type == AT_PARAM_STR)
-		k_free(param->val.s);
-
-	k_free(param);
 }
