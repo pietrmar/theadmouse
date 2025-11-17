@@ -19,6 +19,7 @@ static const char * const at_cmd_internal_names[] = {
 	[0] = "@LOAD_SLOT_INDEX",
 };
 
+// TODO: Maybe have some param flags like `AT_PARAM_RADIX_HEX`, `AT_PARAM_RADIX_DEC`, etc.
 
 typedef int (*at_cmd_fn)(const struct at_cmd_param *arg, void *ctx);
 
@@ -53,12 +54,16 @@ struct at_cmd {
 	void *ctx;
 };
 
+// TODO: Remove this API, callers should just manually run parse + enqueue
 int at_handle_line_inplace(char *s, uint32_t flags);
 int at_handle_line_copy(const char *s, uint32_t flags);
 
 int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
 int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
 
+// TODO: Remove the `at_cmd_*_code()` variant of the API
+
+// TODO: Add `at_cmd_enqueue_and_wait_*()` variants that wait for the result of the processed command
 int at_cmd_enqueue_code(const uint16_t code, const struct at_cmd_param *param, k_timeout_t timeout);
 int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout);
 
