@@ -10,7 +10,14 @@
 
 #define AT_FLAG_PARSER_ALLOW_NO_PREFIX		(1 << 0)
 
-// TODO: Maybe have some param flags like `AT_PARAM_RADIX_HEX`, `AT_PARAM_RADIX_DEC`, etc.
+enum at_cmd_internal {
+	AT_CMD_INTERNAL_BIT		= 0x8000u,
+	AT_CMD_INTERNAL_LOAD_SLOT_INDEX	= AT_CMD_INTERNAL_BIT | 0,
+};
+
+static const char * const at_cmd_internal_names[] = {
+	[0] = "@LOAD_SLOT_INDEX",
+};
 
 
 typedef int (*at_cmd_fn)(const struct at_cmd_param *arg, void *ctx);
@@ -25,10 +32,18 @@ static inline uint16_t at_code_from_str(const char buf[2])
 
 static inline const char *at_code_to_str(uint16_t code, char buf[3])
 {
-    buf[0] = code & 0xFF;
-    buf[1] = code >> 8;
-    buf[2] = '\0';
-    return buf;
+	if (code & AT_CMD_INTERNAL_BIT) {
+		size_t idx = (code & ~AT_CMD_INTERNAL_BIT);
+		if (idx < ARRAY_SIZE(at_cmd_internal_names) && at_cmd_internal_names[idx] != NULL) {
+			return at_cmd_internal_names[idx];
+		}
+		return "@INTERNAL";
+	}
+
+	buf[0] = code & 0xFF;
+	buf[1] = code >> 8;
+	buf[2] = '\0';
+	return buf;
 }
 
 struct at_cmd {

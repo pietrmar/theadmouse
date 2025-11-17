@@ -152,6 +152,17 @@ static int at_cmd_BM(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+static int at_cmd_internal_load_slot_index(const struct at_cmd_param *arg, void *ctx)
+{
+	uint32_t idx;
+
+	int ret = at_cmd_param_get_uint(arg, &idx);
+	if (ret < 0)
+		return ret;
+
+	return slot_manager_load_slot_by_index(idx);
+}
+
 static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(ID), AT_CMD_PARAM_TYPE_NONE, at_cmd_ID, NULL },
 	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
@@ -168,6 +179,8 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(LA), AT_CMD_PARAM_TYPE_NONE, at_cmd_LA, NULL },
 	{ MAKE2CC(LI), AT_CMD_PARAM_TYPE_NONE, at_cmd_LI, NULL },
 	{ MAKE2CC(NE), AT_CMD_PARAM_TYPE_NONE, at_cmd_NE, NULL },
+
+	{ AT_CMD_INTERNAL_LOAD_SLOT_INDEX, AT_CMD_PARAM_TYPE_UINT, at_cmd_internal_load_slot_index, NULL },
 };
 
 static const struct at_cmd *find_at_cmd(const uint16_t code)
@@ -468,6 +481,7 @@ int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const stru
 	}
 
 	enum at_cmd_param_type param_type = at_cmd_param_get_type(param);
+	// TODO: Just to be sure make sure that `code` does not have `AT_CMD_INTERNAL_BIT` set
 	// TODO: Check if `code` is actually in our table and check if the type form the table matches `param->type`
 	char atbuf[3];
 	switch (param_type) {
