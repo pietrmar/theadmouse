@@ -297,6 +297,11 @@ int at_cmd_dispatch_ptr(const struct at_cmd *cmd, const struct at_cmd_param *par
 {
 	char buf[3];
 
+	if (k_current_get() != at_cmd_tid) {
+		LOG_ERR("%s must only be called from the AT dispatcher thread", __func__);
+		return -EPERM;
+	}
+
 	if (!cmd->cb) {
 		// Do not fail here fully but print a warning
 		LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(cmd->code, buf));
