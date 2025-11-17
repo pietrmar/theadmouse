@@ -554,9 +554,20 @@ int slot_manager_init(void)
 		}
 	}
 
-	ret = load_slot_by_index(0);
+
+	// Manually constuct and enqueue internal AT command that loads a slot by
+	// index. This makes sure that `slot_manager_load_slot_by_index()` will be
+	// called from the AT command execution thread.
+	struct at_cmd_param param;
+	ret = at_cmd_param_set_uint(&param, 0);
 	if (ret < 0) {
-		LOG_ERR("Failed to load slot 0");
+		LOG_ERR("Failed to set parameter: %d", ret);
+		return ret;
+	}
+
+	ret = at_cmd_enqueue_code(AT_CMD_INTERNAL_LOAD_SLOT_INDEX, &param, K_FOREVER);
+	if (ret < 0) {
+		LOG_ERR("Failed to enqueue command for loading slot 0: %d", ret);
 		return ret;
 	}
 
