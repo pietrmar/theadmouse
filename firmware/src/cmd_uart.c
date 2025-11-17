@@ -19,6 +19,7 @@ static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_cmd_uart));
 #define CMD_RX_LINE_MAX		(AT_LINE_MAX + 1)
 #define CMD_RX_LINEQ_DEPTH	4
 
+// TODO: We can probably just drop the len parameter
 struct rx_line {
 	uint16_t len;
 	char buf[CMD_RX_LINE_MAX];
