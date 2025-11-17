@@ -401,7 +401,7 @@ int slot_manager_save_current_slot_by_name(const char *name)
 // HACK: This is just for quick testing
 extern int led_set_rgb(int r, int g, int b);
 
-static int load_slot_by_index(int idx)
+int slot_manager_load_slot_by_index(int idx)
 {
 	if (idx < 0 || idx >= SLOT_MANAGER_MAX_SLOTS) {
 		return -EINVAL;
@@ -491,7 +491,7 @@ int slot_manager_load_slot_by_name(const char *name)
 	if (ret < 0)
 		return ret;
 
-	return load_slot_by_index(ret);
+	return slot_manager_load_slot_by_index(ret);
 }
 
 int slot_manager_load_next_slot(void)
@@ -509,7 +509,7 @@ int slot_manager_load_next_slot(void)
 
 	LOG_INF("Loading next slot with index: %d", new_index);
 
-	return load_slot_by_index(new_index);
+	return slot_manager_load_slot_by_index(new_index);
 }
 
 static void reset_active_slot(void)

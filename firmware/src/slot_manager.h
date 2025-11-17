@@ -25,6 +25,7 @@ int slot_manager_dump_all_slots(slot_printf_fn printf_fn);
 int slot_manager_set_color(uint32_t col);
 
 int slot_manager_save_current_slot_by_name(const char *name);
+int slot_manager_load_slot_by_index(int idx);
 int slot_manager_load_slot_by_name(const char *name);
 
 int slot_manager_load_next_slot(void);
