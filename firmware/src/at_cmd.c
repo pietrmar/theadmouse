@@ -26,6 +26,24 @@ static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+static int at_cmd_WA(const struct at_cmd_param *arg, void *ctx)
+{
+	uint32_t ms;
+
+	int ret = at_cmd_param_get_uint(arg, &ms);
+	if (ret < 0)
+		return ret;
+
+	// TODO: There should be a upper bound on how much to sleep
+	if (ms > 1000) {
+		return -EINVAL;
+	}
+
+	k_sleep(K_MSEC(ms));
+
+	return 0;
+}
+
 static int at_cmd_NC(const struct at_cmd_param *arg, void *ctx)
 {
 	return 0;
@@ -165,6 +183,8 @@ static int at_cmd_internal_load_slot_index(const struct at_cmd_param *arg, void 
 
 static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(ID), AT_CMD_PARAM_TYPE_NONE, at_cmd_ID, NULL },
+
+	{ MAKE2CC(WA), AT_CMD_PARAM_TYPE_UINT, at_cmd_WA, NULL },
 	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
 
 	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
