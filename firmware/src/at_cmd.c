@@ -224,6 +224,9 @@ static inline char *rtrim(char *p)
 struct at_cmd_work_item {
 	const struct at_cmd *cmd;
 	struct at_cmd_param param;
+
+	struct k_sem *done_sem;
+	int *result_ptr;
 };
 
 #define AT_CMD_QUEUE_DEPTH 8
@@ -259,29 +262,75 @@ static void at_cmd_thread(void *p1, void *p2, void *p3)
 		if (ret < 0)
 			continue;
 
+		if (!work_item.cmd->cb) {
+			char buf[3];
+			// Do not fail here fully but print a warning
+			LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(work_item.cmd->code, buf));
+			continue;
+		}
+
 		char buf[3];
 		LOG_DBG("Dispatching <%s>", at_code_to_str(work_item.cmd->code, buf));
 
-		// TODO: Can we even do something with the return value here?
 		ret = __at_cmd_dispatch_ptr(work_item.cmd, &work_item.param);
 		if (ret < 0)
 			LOG_DBG("AT command <%s> failed: %d", at_code_to_str(work_item.cmd->code, buf), ret);
+
+		if (work_item.result_ptr)
+			*work_item.result_ptr = ret;
+
+		if (work_item.done_sem)
+			k_sem_give(work_item.done_sem);
 	}
 }
 K_THREAD_DEFINE(at_cmd_tid, 2048, at_cmd_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, 0);
 
-int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout)
+// TODO: This currently only accepts K_FOREVER, if we want actually support timeouts then we need
+// to ensure the lifetime of `done_sem` and `result` in case we return earlier when a timeout is
+// reached.
+int at_cmd_enqueue_and_wait_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout)
 {
-	if (!cmd->cb) {
-		char buf[3];
-		// Do not fail here fully but print a warning
-		LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(cmd->code, buf));
-		return 0;
+	if (K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
+		LOG_ERR("Enqueue and wait not allowed with K_NO_WAIT");
+		return -EWOULDBLOCK;
 	}
 
+	if (!K_TIMEOUT_EQ(timeout, K_FOREVER)) {
+		LOG_ERR("Enqueue and wait only supported with K_FOREVER");
+		return -ENOTSUP;
+	}
+
+	struct k_sem done_sem;
+	k_sem_init(&done_sem, 0, 1);
+	int result;
 	struct at_cmd_work_item work_item = {
 		.cmd = cmd,
 		.param = *param,
+		.done_sem = &done_sem,
+		.result_ptr = &result,
+	};
+
+	int ret = k_msgq_put(&at_cmd_queue, &work_item, timeout);
+	if (ret < 0) {
+		char buf[3];
+		LOG_ERR("Failed to enqueue AT command <%s>: %d", at_code_to_str(cmd->code, buf), ret);
+		return ret;
+	}
+
+	ret = k_sem_take(&done_sem, timeout);
+	if (ret < 0)
+		return ret;
+
+	return result;
+}
+
+int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout)
+{
+	struct at_cmd_work_item work_item = {
+		.cmd = cmd,
+		.param = *param,
+		.done_sem = NULL,
+		.result_ptr = NULL,
 	};
 
 	int ret = k_msgq_put(&at_cmd_queue, &work_item, timeout);
@@ -292,6 +341,18 @@ int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *para
 	}
 
 	return 0;
+}
+
+int at_cmd_enqueue_and_wait_code(const uint16_t code, const struct at_cmd_param *param, k_timeout_t timeout)
+{
+	const struct at_cmd *cmd = find_at_cmd(code);
+	if (cmd == NULL) {
+		char buf[3];
+		LOG_ERR("Could not find AT cmd <%s>", at_code_to_str(code, buf));
+		return -ENOTSUP;
+	}
+
+	return at_cmd_enqueue_and_wait_ptr(cmd, param, timeout);
 }
 
 int at_cmd_enqueue_code(const uint16_t code, const struct at_cmd_param *param, k_timeout_t timeout)

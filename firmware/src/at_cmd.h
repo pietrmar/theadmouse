@@ -63,9 +63,10 @@ int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_c
 
 // TODO: Remove the `at_cmd_*_code()` variant of the API
 
-// TODO: Add `at_cmd_enqueue_and_wait_*()` variants that wait for the result of the processed command
 int at_cmd_enqueue_code(const uint16_t code, const struct at_cmd_param *param, k_timeout_t timeout);
+int at_cmd_enqueue_and_wait_code(const uint16_t code, const struct at_cmd_param *param, k_timeout_t timeout);
 int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout);
+int at_cmd_enqueue_and_wait_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param, k_timeout_t timeout);
 
 int at_cmd_dispatch_code(const uint16_t code, const struct at_cmd_param *param);
 int at_cmd_dispatch_ptr(const struct at_cmd *cmd, const struct at_cmd_param *param);
