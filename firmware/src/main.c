@@ -616,10 +616,6 @@ static int cmd_at(const struct shell *shell, size_t argc, char **argv)
 		return ret;
 	}
 
-	// Parser received empty AT command
-	if (cmd == NULL)
-		return 0;
-
 	ret = at_cmd_enqueue_and_wait_ptr(cmd, &cmd_param, K_FOREVER);
 	if (ret < 0) {
 		shell_error(shell, "AT command failed: %d", ret);
