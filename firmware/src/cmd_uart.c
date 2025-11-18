@@ -19,14 +19,9 @@ static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_cmd_uart));
 #define CMD_RX_LINE_MAX		(AT_LINE_MAX + 1)
 #define CMD_RX_LINEQ_DEPTH	4
 
-// TODO: We can probably just drop the len parameter
-struct rx_line {
-	uint16_t len;
-	char buf[CMD_RX_LINE_MAX];
-};
-
-static struct rx_line cur_rx_line;
-K_MSGQ_DEFINE(line_q, sizeof(struct rx_line), CMD_RX_LINEQ_DEPTH, 4);
+static char cur_rx_line[CMD_RX_LINE_MAX];
+static uint16_t cur_rx_len;
+K_MSGQ_DEFINE(line_q, sizeof(cur_rx_line), CMD_RX_LINEQ_DEPTH, 4);
 
 static void line_rx_thread(void *, void *, void *);
 K_THREAD_DEFINE(line_rx_tid, 2048, line_rx_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(8), 0, 0);
@@ -61,27 +56,27 @@ static void uart_isr(const struct device *dev, void *user_data)
 					char c = buf[i];
 
 					if (c == '\r' || c == '\n') {
-						if (cur_rx_line.len > 0) {
-							cur_rx_line.buf[cur_rx_line.len] = '\0';
+						if (cur_rx_len > 0) {
+							cur_rx_line[cur_rx_len] = '\0';
 
 							int qret = k_msgq_put(&line_q, &cur_rx_line, K_NO_WAIT);
 							if (qret < 0) {
 								LOG_ERR("Failed to enqueue message: %d", ret);
 							}
 
-							cur_rx_line.len = 0;
+							cur_rx_len = 0;
 						}
 
 						continue;
 					}
 
-					if (cur_rx_line.len < (sizeof(cur_rx_line.buf) - 1)) {
-						cur_rx_line.buf[cur_rx_line.len] = c;
-						cur_rx_line.len++;
+					if (cur_rx_len < (sizeof(cur_rx_line) - 1)) {
+						cur_rx_line[cur_rx_len] = c;
+						cur_rx_len++;
 					} else {
-						cur_rx_line.buf[cur_rx_line.len] = '\0';
-						LOG_ERR("Line too long, dropped: %s", cur_rx_line.buf);
-						cur_rx_line.len = 0;
+						cur_rx_line[cur_rx_len] = '\0';
+						LOG_ERR("Line too long, dropped: %s", cur_rx_line);
+						cur_rx_len = 0;
 					}
 				}
 
@@ -155,15 +150,15 @@ static void line_rx_thread(void *p1, void *p2, void *p3)
 {
 	ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
 
-	struct rx_line line;
+	char line[CMD_RX_LINE_MAX];
 
 	while (true) {
 		k_msgq_get(&line_q, &line, K_FOREVER);
 
-		LOG_DBG("Rx: %s", line.buf);
-		int ret = at_handle_line_inplace(line.buf, 0);
+		LOG_DBG("Rx: %s", line);
+		int ret = at_handle_line_inplace(line, 0);
 		if (ret < 0) {
-			LOG_ERR("AT handling failed: %d (line: <%s>)", ret, line.buf);
+			LOG_ERR("AT handling failed: %d (line: <%s>)", ret, line);
 		}
 	}
 }
