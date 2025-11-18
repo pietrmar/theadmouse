@@ -170,6 +170,12 @@ static int at_cmd_BM(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+static int at_cmd_internal_empty_command(const struct at_cmd_param *arg, void *ctx)
+{
+	at_reply("OK");
+	return 0;
+}
+
 static int at_cmd_internal_load_slot_index(const struct at_cmd_param *arg, void *ctx)
 {
 	uint32_t idx;
@@ -200,6 +206,7 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(LI), AT_CMD_PARAM_TYPE_NONE, at_cmd_LI, NULL },
 	{ MAKE2CC(NE), AT_CMD_PARAM_TYPE_NONE, at_cmd_NE, NULL },
 
+	{ AT_CMD_INTERNAL_EMPTY_COMMAND, AT_CMD_PARAM_TYPE_NONE, at_cmd_internal_empty_command, NULL },
 	{ AT_CMD_INTERNAL_LOAD_SLOT_INDEX, AT_CMD_PARAM_TYPE_UINT, at_cmd_internal_load_slot_index, NULL },
 };
 
@@ -436,9 +443,18 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 	if (strncasecmp(s, "AT", 2) == 0) {
 		s += 2;
 
-		// Plain AT command just return OK
+		// Empty command with just the AT prefix, return the special command here.
 		if (*s == '\0') {
-			*out_cmd = NULL;
+			const struct at_cmd *cmd = find_at_cmd(AT_CMD_INTERNAL_EMPTY_COMMAND);
+			struct at_cmd_param param = { 0 };
+
+			if (cmd == NULL) {
+				LOG_ERR("Missing iternal empty command");
+				return -EFAULT;
+			}
+
+			*out_cmd_param = param;
+			*out_cmd = cmd;
 			return 0;
 		}
 
@@ -617,11 +633,6 @@ int at_handle_line_inplace(char *s, uint32_t flags)
 		// modified so we cannot print the whole line here anymore
 		LOG_ERR("Failed to parse line: %d", ret);
 		return ret;
-	}
-
-	if (cmd == NULL) {
-		at_reply("OK");
-		return 0;
 	}
 
 	return at_cmd_enqueue_ptr(cmd, &cmd_param, K_FOREVER);

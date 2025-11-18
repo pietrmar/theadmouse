@@ -12,11 +12,13 @@
 
 enum at_cmd_internal {
 	AT_CMD_INTERNAL_BIT		= 0x8000u,
-	AT_CMD_INTERNAL_LOAD_SLOT_INDEX	= AT_CMD_INTERNAL_BIT | 0,
+	AT_CMD_INTERNAL_EMPTY_COMMAND	= AT_CMD_INTERNAL_BIT | 0,
+	AT_CMD_INTERNAL_LOAD_SLOT_INDEX	= AT_CMD_INTERNAL_BIT | 1,
 };
 
 static const char * const at_cmd_internal_names[] = {
-	[0] = "@LOAD_SLOT_INDEX",
+	[0] = "@EMPTY_COMMAND",
+	[1] = "@LOAD_SLOT_INDEX",
 };
 
 // TODO: Maybe have some param flags like `AT_PARAM_RADIX_HEX`, `AT_PARAM_RADIX_DEC`, etc.
