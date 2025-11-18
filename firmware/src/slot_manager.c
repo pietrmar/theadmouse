@@ -454,6 +454,7 @@ int slot_manager_load_slot_by_index(int idx)
 				continue;
 			}
 
+			// Parser received empty AT command
 			if (cmd == NULL)
 				continue;
 
