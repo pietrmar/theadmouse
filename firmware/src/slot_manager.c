@@ -454,10 +454,6 @@ int slot_manager_load_slot_by_index(int idx)
 				continue;
 			}
 
-			// Parser received empty AT command
-			if (cmd == NULL)
-				continue;
-
 			ret = at_cmd_dispatch_ptr(cmd, &cmd_param);
 			if (ret < 0) {
 				LOG_ERR("Failed to dispatch line: %d", ret);
