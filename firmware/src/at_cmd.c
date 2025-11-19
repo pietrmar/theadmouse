@@ -18,6 +18,7 @@
 #include "button_manager.h"
 #include "slot_manager.h"
 #include "input_protocol.h"
+#include "headmouse_input.h"
 
 LOG_MODULE_REGISTER(at, LOG_LEVEL_DBG);
 
@@ -135,32 +136,17 @@ static int at_cmd_LI(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
-enum mouse_axis {
-	MOUSE_AXIS_X,
-	MOUSE_AXIS_Y,
-};
-
-// HACK: Do not use hog_push_report() directly from here, instead
-// have a proper queuing system in place. But for a quick demo
-// it will do.
-extern void hog_push_report(int8_t btn, int8_t x, int8_t y);
 static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 {
 	int d;
-	enum mouse_axis a = (enum mouse_axis)ctx;
+	// code is either INPUT_REL_X or INPUT_REL_Y
+	uint16_t code = (uint16_t)(uintptr_t)ctx;
 
 	int ret = at_cmd_param_get_int(arg, &d);
 	if (ret < 0)
 		return ret;
 
-	LOG_WRN("Directly using hog_push_report()");
-	if (a == MOUSE_AXIS_X) {
-		hog_push_report(0, d, 0);
-	} else if (a == MOUSE_AXIS_Y) {
-		hog_push_report(0, 0, d);
-	}
-
-	return 0;
+	return hm_input_report_rel(code, d, true, K_FOREVER);
 }
 
 // TODO: Instead of handling this ourselved here, add a simple `button_manager_arm()` or so
@@ -211,8 +197,8 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(WA), AT_CMD_PARAM_TYPE_UINT, at_cmd_WA, NULL },
 	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
 
-	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
-	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
+	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)INPUT_REL_X},
+	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)INPUT_REL_Y},
 
 	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
