@@ -17,6 +17,7 @@
 #include "cmd_uart.h"
 #include "button_manager.h"
 #include "slot_manager.h"
+#include "input_protocol.h"
 
 LOG_MODULE_REGISTER(at, LOG_LEVEL_DBG);
 
@@ -29,6 +30,17 @@ static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 		return ret;
 
 	return 0;
+}
+
+static int at_cmd_MM(const struct at_cmd_param *arg, void *ctx)
+{
+	uint32_t p;
+
+	int ret = at_cmd_param_get_uint(arg, &p);
+	if (ret < 0)
+		return ret;
+
+	return slot_manager_set_input_mode((enum input_mode)p);
 }
 
 static int at_cmd_WA(const struct at_cmd_param *arg, void *ctx)
@@ -195,6 +207,7 @@ static int at_cmd_internal_load_slot_index(const struct at_cmd_param *arg, void 
 static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(ID), AT_CMD_PARAM_TYPE_NONE, at_cmd_ID, NULL },
 
+	{ MAKE2CC(MM), AT_CMD_PARAM_TYPE_UINT, at_cmd_MM, NULL },
 	{ MAKE2CC(WA), AT_CMD_PARAM_TYPE_UINT, at_cmd_WA, NULL },
 	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
 
