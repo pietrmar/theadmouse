@@ -14,6 +14,4 @@ target_sources(app PRIVATE
 		src/hog.c
 		src/slot_manager.c
 		src/telemetry_uart.c
-
-		src/MadgwickAHRS/MadgwickAHRS.c
 )
