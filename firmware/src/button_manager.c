@@ -106,8 +106,8 @@ int button_manager_delete_mapping(size_t idx)
 
 static void on_input(struct input_event *evt, void *user_data)
 {
-	LOG_DBG("Got event, device: %s, type: %u, code: %u (%#x), value: %u",
-			evt->dev->name, evt->type, evt->code, evt->code, evt->value);
+	LOG_DBG("Got event, device: %s, sync: %u, type: %u, code: %u (%#x), value: %d",
+			evt->dev->name, evt->sync, evt->type, evt->code, evt->code, evt->value);
 
 	if (evt->type != INPUT_EV_KEY)
 		return;
