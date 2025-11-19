@@ -61,7 +61,7 @@ static void uart_isr(const struct device *dev, void *user_data)
 
 							int qret = k_msgq_put(&line_q, &cur_rx_line, K_NO_WAIT);
 							if (qret < 0) {
-								LOG_ERR("Failed to enqueue message: %d", ret);
+								LOG_ERR("Failed to enqueue message: %d", qret);
 							}
 
 							cur_rx_len = 0;
