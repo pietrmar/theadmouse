@@ -681,13 +681,17 @@ static inline int at_putn(const char *s, size_t len)
 	return 0;
 }
 
+static K_MUTEX_DEFINE(at_write_mutex);
 static inline int at_replyn(const char *s, size_t len)
 {
-	int ret = at_putn(s, len);
-	if (ret < 0)
-		return ret;
+	k_mutex_lock(&at_write_mutex, K_FOREVER);
 
-	return at_putn(AT_EOL, sizeof(AT_EOL) - 1);
+	int ret = at_putn(s, len);
+	if (ret == 0)
+		ret = at_putn(AT_EOL, sizeof(AT_EOL) - 1);
+
+	k_mutex_unlock(&at_write_mutex);
+	return ret;
 }
 
 int at_reply(const char *s)
