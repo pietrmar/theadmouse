@@ -18,6 +18,10 @@ module = AT
 module-str = at
 source "subsys/logging/Kconfig.template.log_config"
 
+module = BLE_HID_SERVICE
+module-str = ble_hid_service
+source "subsys/logging/Kconfig.template.log_config"
+
 module = BUTTON_MANAGER
 module-str = button_manager
 source "subsys/logging/Kconfig.template.log_config"

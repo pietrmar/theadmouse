@@ -8,6 +8,7 @@ target_sources(app PRIVATE
 
 		src/at_cmd.c
 		src/at_cmd_param.c
+		src/ble_hid_service.c
 		src/button_manager.c
 		src/cmd_uart.c
 		src/headmouse_input.c
