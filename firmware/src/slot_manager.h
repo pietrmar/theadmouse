@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "input_protocol.h"
+
 #define SLOT_MANAGER_BASE_PATH		"/lfs"
 #define SLOT_MANAGER_SCHEMA_VERSION	1
 #define SLOT_MANAGER_MAX_SLOTS		8
@@ -14,6 +16,7 @@ typedef int (*slot_printf_fn)(const char *fmt, ...);
 struct slot_settings
 {
 	uint32_t color;
+	enum input_mode input_mode;
 };
 
 int slot_manager_init(void);
@@ -23,6 +26,7 @@ int slot_manager_list_all_slots(slot_printf_fn printf_fn);
 int slot_manager_dump_all_slots(slot_printf_fn printf_fn);
 
 int slot_manager_set_color(uint32_t col);
+int slot_manager_set_input_mode(enum input_mode mode);
 
 int slot_manager_save_current_slot_by_name(const char *name);
 int slot_manager_load_slot_by_index(int idx);
