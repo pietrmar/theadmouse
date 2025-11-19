@@ -31,7 +31,6 @@ K_THREAD_DEFINE(line_rx_tid, 2048, line_rx_thread, NULL, NULL, NULL, K_PRIO_PREE
 #define CMD_TX_CHUNK	256
 RING_BUF_DECLARE(cmd_tx_rb, CMD_TX_BUF_SIZE);
 static struct k_spinlock cmd_tx_rb_lock;
-K_MUTEX_DEFINE(cmd_tx_call_lock);
 
 
 static void uart_isr(const struct device *dev, void *user_data)
@@ -117,14 +116,11 @@ static inline bool uart_host_is_ready()
 	return (dtr != 0);
 }
 
-// NOTE: This cannot be called from interrupt context becasue of the sleep and mutex lock.
 ssize_t cmd_uart_write(const uint8_t *data, size_t len)
 {
 	if (!uart_host_is_ready()) {
 		return -ENOTCONN;
 	}
-
-	k_mutex_lock(&cmd_tx_call_lock, K_FOREVER);
 
 	size_t written = 0;
 	while (written < len) {
@@ -133,6 +129,8 @@ ssize_t cmd_uart_write(const uint8_t *data, size_t len)
 		k_spin_unlock(&cmd_tx_rb_lock, key);
 
 		if (rb_written == 0) {
+			// TODO: Consider not busy looping and isntead returning the number of bytes
+			// writte so far.
 			k_sleep(K_TICKS(1));
 			continue;
 		}
@@ -140,8 +138,6 @@ ssize_t cmd_uart_write(const uint8_t *data, size_t len)
 		written += rb_written;
 		uart_irq_tx_enable(uart_dev);
 	}
-
-	k_mutex_unlock(&cmd_tx_call_lock);
 
 	return written;
 }
