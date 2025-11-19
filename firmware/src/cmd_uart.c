@@ -33,6 +33,8 @@ RING_BUF_DECLARE(cmd_tx_rb, CMD_TX_BUF_SIZE);
 static struct k_spinlock cmd_tx_rb_lock;
 
 
+// TODO: Process and assemble the lines in a thread instead of the ISR
+// TOOD: Use better bulding blocks, to avoid copies and such
 static void uart_isr(const struct device *dev, void *user_data)
 {
 	// TODO: For real UARTs (not CDC-ACM) we probably don't want to loop here
