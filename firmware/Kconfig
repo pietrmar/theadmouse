@@ -2,15 +2,45 @@ mainmenu "theadmouse"
 
 menu "TheadMouse Configuration"
 
-module = THEADMOUSE
-module-str = theadmouse
-source "subsys/logging/Kconfig.template.log_config"
-
 config APP_PROJECT_NAME
 	string "Project name"
 	default "TheadMouse"
 	help
 		Human-readable name of this firmware/application
+
+menu "Logging Configuration"
+
+module = THEADMOUSE
+module-str = theadmouse
+source "subsys/logging/Kconfig.template.log_config"
+
+module = AT
+module-str = at
+source "subsys/logging/Kconfig.template.log_config"
+
+module = BUTTON_MANAGER
+module-str = button_manager
+source "subsys/logging/Kconfig.template.log_config"
+
+module = CMD_UART
+module-str = cmd_uart
+source "subsys/logging/Kconfig.template.log_config"
+
+module = HEADMOUSE_INPUT
+module-str = headmouse_input
+source "subsys/logging/Kconfig.template.log_config"
+
+module = SLOT_MANAGER
+module-str = slot_manager
+source "subsys/logging/Kconfig.template.log_config"
+
+module = TELEMETRY_UART
+module-str = telemetry_uart
+source "subsys/logging/Kconfig.template.log_config"
+
 endmenu
+
+endmenu
+
 
 source "Kconfig.zephyr"

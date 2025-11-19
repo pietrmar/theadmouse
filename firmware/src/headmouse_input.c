@@ -3,7 +3,7 @@
 #include <zephyr/input/input.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(headmouse_input, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(headmouse_input, CONFIG_HEADMOUSE_INPUT_LOG_LEVEL);
 
 DEVICE_DEFINE(
 	headmouse_input_kbd,

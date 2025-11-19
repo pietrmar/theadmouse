@@ -10,7 +10,7 @@
 #include "cmd_uart.h"
 #include "at_cmd.h"
 
-LOG_MODULE_REGISTER(cmd_uart, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(cmd_uart, CONFIG_CMD_UART_LOG_LEVEL);
 
 // TODO: Don't make this a full compile-time failure when the `mpi,cmd-uart`
 // property is missing.

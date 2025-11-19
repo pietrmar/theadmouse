@@ -7,7 +7,7 @@
 #include "at_cmd.h"
 #include "button_manager.h"
 
-LOG_MODULE_REGISTER(button_manager, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(button_manager, CONFIG_BUTTON_MANAGER_LOG_LEVEL);
 
 static const struct device *const btn_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_buttons));
 

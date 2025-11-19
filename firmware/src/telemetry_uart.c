@@ -9,7 +9,7 @@
 
 #include "telemetry_uart.h"
 
-LOG_MODULE_REGISTER(telemetry_uart, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(telemetry_uart, CONFIG_TELEMETRY_UART_LOG_LEVEL);
 
 #define TELEMETRY_TX_BUF_SIZE	2048
 #define TELEMETRY_TX_CHUNK	256

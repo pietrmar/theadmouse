@@ -20,7 +20,7 @@
 #include "input_protocol.h"
 #include "headmouse_input.h"
 
-LOG_MODULE_REGISTER(at, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(at, CONFIG_AT_LOG_LEVEL);
 
 static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 {

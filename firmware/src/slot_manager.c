@@ -9,7 +9,7 @@
 
 #define MAX_PATH_LEN	255
 
-LOG_MODULE_REGISTER(slot_manager, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(slot_manager, CONFIG_SLOT_MANAGER_LOG_LEVEL);
 
 // TODO: This is currently implemented similar like on the FABI where
 // we store the AT commands in plain-text and each slot corresponds
