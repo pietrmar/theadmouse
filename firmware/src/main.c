@@ -1,24 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
-#include <zephyr/bluetooth/services/nus.h>
-#include <zephyr/device.h>
+
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/drivers/led.h>
 #include <zephyr/drivers/retained_mem.h>
-#include <zephyr/drivers/sensor.h>
-#include <zephyr/kernel.h>
+
 #include <zephyr/settings/settings.h>
 #include <zephyr/shell/shell.h>
-#include <zephyr/spinlock.h>
-#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log.h>
-
-#include <math.h>
 
 #include "button_manager.h"
 #include "slot_manager.h"
