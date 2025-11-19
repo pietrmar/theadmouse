@@ -404,8 +404,10 @@ int slot_manager_save_current_slot_by_name(const char *name)
 
 	if (ret == -ENOENT) {
 		ret = slot_manager_get_next_free_index();
-		if (ret < 0)
+		if (ret < 0) {
+			LOG_WRN("Failed to get the next free slot index: %d", ret);
 			return ret;
+		}
 	}
 
 	return save_current_slot_by_index(ret, name);
@@ -507,16 +509,31 @@ int slot_manager_load_slot_by_name(const char *name)
 
 int slot_manager_load_next_slot(void)
 {
-	if (active_slot_index < 0)
-		return -EINVAL;
-
-	int new_index = active_slot_index + 1;
-
 	int next_free = slot_manager_get_next_free_index();
 
-	if (next_free < 0 || (next_free > 0 && new_index >= next_free)) {
-		new_index = 0;
+	if (next_free < 0) {
+		// If there was no more free slot (`-ENOSPC`) then wrap at `SLOT_MANAGER_MAX_SLOTS`.
+		// If we got some other error code then error out.
+		if (next_free == -ENOSPC)
+			next_free = SLOT_MANAGER_MAX_SLOTS;
+		else {
+			LOG_ERR("slot_manager_get_next_free_index() failed: %d", next_free);
+			return next_free;
+		}
 	}
+
+	if (next_free == 0) {
+		LOG_ERR("No slots configured");
+		return -ENOENT;
+	}
+
+	if (active_slot_index < 0 || active_slot_index >= next_free)  {
+		LOG_ERR("active_slot_index is invalid: %d", active_slot_index);
+		return -EFAULT;
+	}
+
+
+	int new_index = (active_slot_index + 1) % next_free;
 
 	LOG_INF("Loading next slot with index: %d", new_index);
 
