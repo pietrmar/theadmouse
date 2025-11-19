@@ -45,7 +45,7 @@ int ble_start_adv(void)
 	le_scan_rsp[0].data = bt_get_name();
 	le_scan_rsp[0].data_len = strlen(bt_get_name());
 
-	return bt_le_adv_start(BT_LE_ADV_CONN, le_adv, ARRAY_SIZE(le_adv), le_scan_rsp, ARRAY_SIZE(le_scan_rsp));
+	return bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, le_adv, ARRAY_SIZE(le_adv), le_scan_rsp, ARRAY_SIZE(le_scan_rsp));
 }
 
 
