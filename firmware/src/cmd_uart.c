@@ -119,6 +119,7 @@ static inline bool uart_host_is_ready()
 ssize_t cmd_uart_write(const uint8_t *data, size_t len)
 {
 	if (!uart_host_is_ready()) {
+		LOG_WRN("UART host not ready");
 		return -ENOTCONN;
 	}
 
