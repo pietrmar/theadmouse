@@ -1,12 +1,8 @@
 #pragma once
 
-#include <zephyr/device.h>
-#include <zephyr/input/input.h>
+#include "hm_hid_evt.h"
 
-extern const struct device *const dev_headmouse_input_kbd;
-extern const struct device *const dev_headmouse_input_mouse;
-
-static inline int hm_input_report_rel(uint16_t code, int32_t value, bool sync, k_timeout_t timeout)
-{
-	return input_report_rel(dev_headmouse_input_mouse, code, value, sync, timeout);
-}
+int hm_input_report_key(uint8_t hid_keycode, bool pressed, k_timeout_t timeout);
+int hm_input_report_mouse_move(int16_t dx, int16_t dy, k_timeout_t timeout);
+int hm_input_report_mouse_wheel(int8_t steps, k_timeout_t timeout);
+int hm_input_report_mouse_btn(enum hm_hid_mouse_btn btn, bool pressed, k_timeout_t timeout);
