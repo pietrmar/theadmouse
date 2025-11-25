@@ -17,6 +17,7 @@
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log.h>
 
+#include "ble_hid_service.h"
 #include "button_manager.h"
 #include "slot_manager.h"
 #include "telemetry_uart.h"
@@ -27,6 +28,9 @@ LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
 
 static const struct bt_data le_adv[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+	BT_DATA_BYTES(BT_DATA_GAP_APPEARANCE,
+		      (CONFIG_BT_DEVICE_APPEARANCE >> 0) & 0xff,
+		      (CONFIG_BT_DEVICE_APPEARANCE >> 8) & 0xff),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
 			BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
 			BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
@@ -73,6 +77,12 @@ static int bt_init_friendly_name(void)
 int ble_init(void)
 {
 	int ret;
+
+	ret = ble_hid_service_init();
+	if (ret < 0) {
+		LOG_ERR("Failed to start BLE HID service: %d", ret);
+		return ret;
+	}
 
 	ret = bt_enable(NULL);
 	if (ret < 0) {
@@ -137,6 +147,11 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	if (ret < 0) {
 		LOG_ERR("Failed do adjust connection interval: %d", ret);
 	}
+
+	ret = ble_hid_service_connected(conn);
+	if (ret < 0) {
+		LOG_ERR("Failed to notify HID service about connection: %d", ret);
+	}
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -146,6 +161,11 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	LOG_INF("Disconnected from %s, reason: %s (%#04x)", addr, bt_hci_err_to_str(reason), reason);
+
+	int ret = ble_hid_service_disconnected(conn);
+	if (ret < 0) {
+		LOG_ERR("Failed to notify HID service about disconnection: %d", ret);
+	}
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
