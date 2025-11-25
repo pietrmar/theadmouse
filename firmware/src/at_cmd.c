@@ -1,6 +1,7 @@
 
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -136,17 +137,72 @@ static int at_cmd_LI(const struct at_cmd_param *arg, void *ctx)
 	return 0;
 }
 
+struct mouse_click_params {
+	enum hm_hid_mouse_btn btn;
+	bool double_click;
+};
+static int at_cmd_Cx(const struct at_cmd_param *arg, void *ctx)
+{
+	struct mouse_click_params *params = (struct mouse_click_params *)ctx;
+
+	int ret = 0;
+	ret = hm_input_report_mouse_btn(params->btn, true, K_FOREVER);
+	if (ret < 0)
+		return ret;
+
+	ret = hm_input_report_mouse_btn(params->btn, false, K_FOREVER);
+	if (ret < 0)
+		return ret;
+
+	if (params->double_click) {
+		// TODO: Consider scheduling the second click via a delayed work
+		// to not do an actual sleep here. Not sure if we want this, think
+		// about it.
+		k_sleep(K_MSEC(100));
+
+		ret = hm_input_report_mouse_btn(params->btn, true, K_FOREVER);
+		if (ret < 0)
+			return ret;
+
+		ret = hm_input_report_mouse_btn(params->btn, false, K_FOREVER);
+		if (ret < 0)
+			return ret;
+	}
+
+	return ret;
+}
+
+enum mouse_wheel {
+	MOUSE_WHEEL_UP,
+	MOUSE_WHEEL_DOWN,
+};
+static int at_cmd_Wx(const struct at_cmd_param *arg, void *ctx)
+{
+	enum mouse_wheel wheel = (enum mouse_wheel)(uintptr_t)ctx;
+
+	// TODO: Take the step count from an `AT WS` command
+	int8_t steps = wheel == MOUSE_WHEEL_UP ? +10 : -10;
+
+	return hm_input_report_mouse_wheel(steps, K_FOREVER);
+}
+
+enum mouse_axis {
+	MOUSE_AXIS_X,
+	MOUSE_AXIS_Y,
+};
 static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 {
 	int d;
-	// code is either INPUT_REL_X or INPUT_REL_Y
-	uint16_t code = (uint16_t)(uintptr_t)ctx;
+	enum mouse_axis axis = (enum mouse_axis)(uintptr_t)ctx;
 
 	int ret = at_cmd_param_get_int(arg, &d);
 	if (ret < 0)
 		return ret;
 
-	return hm_input_report_rel(code, d, true, K_FOREVER);
+	int16_t dx = axis == MOUSE_AXIS_X ? d : 0;
+	int16_t dy = axis == MOUSE_AXIS_Y ? d : 0;
+
+	return hm_input_report_mouse_move(dx, dy, K_FOREVER);
 }
 
 // TODO: Instead of handling this ourselved here, add a simple `button_manager_arm()` or so
@@ -197,8 +253,16 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(WA), AT_CMD_PARAM_TYPE_UINT, at_cmd_WA, NULL },
 	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
 
-	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)INPUT_REL_X},
-	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)INPUT_REL_Y},
+	{ MAKE2CC(CL), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_LEFT, .double_click = false}},
+	{ MAKE2CC(CD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_LEFT, .double_click = true}},
+	{ MAKE2CC(CR), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_RIGHT, .double_click = false}},
+	{ MAKE2CC(CM), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_MIDDLE, .double_click = false}},
+
+	{ MAKE2CC(WU), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_UP},
+	{ MAKE2CC(WD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_DOWN},
+
+	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
+	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
 
 	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
