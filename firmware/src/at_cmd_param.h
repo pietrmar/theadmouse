@@ -18,6 +18,7 @@ struct at_cmd_param {
 	enum at_cmd_param_type type;
 	uint8_t flags;
 
+	// TODO: Drop the `val` and just access the union members directly
 	union {
 		int32_t	i;
 		uint32_t ui;
