@@ -17,12 +17,15 @@
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log.h>
 
+#include "at_cmd.h"
 #include "ble_hid_service.h"
 #include "button_manager.h"
+#include "cmd_uart.h"
 #include "slot_manager.h"
 #include "telemetry_uart.h"
-#include "cmd_uart.h"
-#include "at_cmd.h"
+
+// TODO: Define use-cases and behavior for pairing, re-pairing,
+// and connection to multiple devices. (General vs. Limited Discoverable)
 
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
 
