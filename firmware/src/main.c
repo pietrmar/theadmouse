@@ -44,6 +44,8 @@ static struct bt_data le_scan_rsp[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
+// TODO: We should prevent multiple client connections at the same time, or be able to manage multiple
+// simultaneous clients.
 int ble_start_adv(void)
 {
 	le_scan_rsp[0].data = bt_get_name();
@@ -166,9 +168,12 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	LOG_INF("Disconnected from %s, reason: %s (%#04x)", addr, bt_hci_err_to_str(reason), reason);
 
 	int ret = ble_hid_service_disconnected(conn);
-	if (ret < 0) {
+	if (ret < 0)
 		LOG_ERR("Failed to notify HID service about disconnection: %d", ret);
-	}
+
+	ret = ble_start_adv();
+	if (ret < 0)
+		LOG_ERR("Failed to start BLE advertisement: %d", ret);
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
