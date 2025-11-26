@@ -12,6 +12,7 @@ target_sources(app PRIVATE
 		src/button_manager.c
 		src/cmd_uart.c
 		src/headmouse_input.c
+		src/motion_engine.c
 		src/slot_manager.c
 		src/telemetry_uart.c
 )

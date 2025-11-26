@@ -21,6 +21,7 @@
 #include "ble_hid_service.h"
 #include "button_manager.h"
 #include "cmd_uart.h"
+#include "motion_engine.h"
 #include "slot_manager.h"
 #include "telemetry_uart.h"
 
@@ -261,6 +262,11 @@ int main(void)
 	ret = cmd_uart_init();
 	if (ret < 0) {
 		LOG_ERR("cmd uart initialization failed");
+	}
+
+	ret = motion_engine_init();
+	if (ret < 0) {
+		LOG_ERR("motion engine initialization failed");
 	}
 
 	while (true) {
