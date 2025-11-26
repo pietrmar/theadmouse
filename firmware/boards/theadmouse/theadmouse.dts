@@ -26,6 +26,8 @@
 		mpi,buttons = &buttons;
 		mpi,cmd-uart = &uart_cmd;
 		mpi,telemetry-uart = &uart_telemetry;
+
+		mpi,imu = &lsm6dsl;
 	};
 
 	buttons: buttons {
