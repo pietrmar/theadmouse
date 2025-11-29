@@ -260,7 +260,7 @@ static int send_mouse_report(int8_t dx, int8_t dy, int8_t wheel, uint8_t btn_sta
 	// TODO: I've not seen it fail, but consider handling `-ENOMEM` when the Tx queue is full
 	int ret = bt_hids_inp_rep_send(&hids_obj, current_conn, REP_MOUSE_IDX, rep, REP_MOUSE_SIZE, NULL);
 	if (ret < 0)
-		LOG_ERR("Send kbd report failed: %d", ret);
+		LOG_ERR("Send mouse report failed: %d", ret);
 
 	return ret;
 }
