@@ -32,3 +32,13 @@ if(CONFIG_LSM6DSL_CUSTOM)
 		target_sources(app PRIVATE drivers/sensor/st/lsm6dsl/lsm6dsl_trigger.c)
 	endif()
 endif()
+
+if(CONFIG_LIS2MDL_CUSTOM)
+	target_include_directories(app PRIVATE ${ZEPHYR_BASE}/drivers/sensor/st/stmemsc)
+
+	target_sources(app PRIVATE drivers/sensor/st/lis2mdl/lis2mdl.c)
+
+	if (CONFIG_LIS2MDL_TRIGGER)
+		target_sources(app PRIVATE drivers/sensor/st/lis2mdl/lis2mdl_trigger.c)
+	endif()
+endif()

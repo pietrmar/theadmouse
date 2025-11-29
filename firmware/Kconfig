@@ -49,6 +49,7 @@ source "subsys/logging/Kconfig.template.log_config"
 endmenu
 
 rsource "drivers/sensor/st/lsm6dsl/Kconfig"
+rsource "drivers/sensor/st/lis2mdl/Kconfig"
 
 endmenu
 
