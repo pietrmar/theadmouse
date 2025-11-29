@@ -331,7 +331,12 @@ static int lis2mdl_init(const struct device *dev)
 
 	if (cfg->spi_4wires) {
 		/* Set SPI 4wires if it's the case */
-		if (lis2mdl_spi_mode_set(ctx, LIS2MDL_SPI_4_WIRE) < 0) {
+		lis2mdl_cfg_reg_c_t reg = {
+			._4wspi = 1,
+			.i2c_dis = 1,
+		};
+
+		if (lis2mdl_write_reg(ctx, LIS2MDL_CFG_REG_C, (uint8_t *)&reg, 1) < 0) {
 			return -EIO;
 		}
 	}
@@ -356,7 +361,12 @@ static int lis2mdl_init(const struct device *dev)
 
 	if (cfg->spi_4wires) {
 		/* After s/w reset set SPI 4wires again if the case */
-		if (lis2mdl_spi_mode_set(ctx, LIS2MDL_SPI_4_WIRE) < 0) {
+		lis2mdl_cfg_reg_c_t reg = {
+			._4wspi = 1,
+			.i2c_dis = 1,
+		};
+
+		if (lis2mdl_write_reg(ctx, LIS2MDL_CFG_REG_C, (uint8_t *)&reg, 1) < 0) {
 			return -EIO;
 		}
 	}
