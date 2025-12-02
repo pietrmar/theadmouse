@@ -15,7 +15,6 @@ LOG_MODULE_REGISTER(telemetry_uart, CONFIG_TELEMETRY_UART_LOG_LEVEL);
 #define TELEMETRY_TX_CHUNK	256
 RING_BUF_DECLARE(telemetry_tx_rb, TELEMETRY_TX_BUF_SIZE);
 static struct k_spinlock telemetry_tx_rb_lock;
-K_MUTEX_DEFINE(telemetry_tx_call_lock);
 
 
 // TODO: Don't make this a full compile-time failure when the `mpi,telemetry-uart`
@@ -68,25 +67,20 @@ static ssize_t telemetry_uart_write(const uint8_t *data, size_t len)
 		return -ENOTCONN;
 	}
 
-	k_mutex_lock(&telemetry_tx_call_lock, K_FOREVER);
-
 	size_t written = 0;
 	while (written < len) {
 		k_spinlock_key_t key = k_spin_lock(&telemetry_tx_rb_lock);
 		uint32_t rb_written = ring_buf_put(&telemetry_tx_rb, &data[written], (uint32_t)(len - written));
 		k_spin_unlock(&telemetry_tx_rb_lock, key);
 
+		// TODO: Figure out if we can handle this somehow better?
 		if (rb_written == 0) {
-			// TODO: This is for sure problematic to be called from an ISR
-			k_sleep(K_TICKS(1));
-			continue;
+			return written ? written : -EOVERFLOW;
 		}
 
 		written += rb_written;
 		uart_irq_tx_enable(uart_dev);
 	}
-
-	k_mutex_unlock(&telemetry_tx_call_lock);
 
 	return written;
 }
