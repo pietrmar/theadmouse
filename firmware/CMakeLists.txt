@@ -15,6 +15,8 @@ target_sources(app PRIVATE
 		src/motion_engine.c
 		src/slot_manager.c
 		src/telemetry_uart.c
+
+		src/MadgwickAHRS/MadgwickAHRS.c
 )
 
 if(CONFIG_LSM6DSL_CUSTOM)
