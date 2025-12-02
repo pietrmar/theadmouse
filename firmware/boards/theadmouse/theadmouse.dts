@@ -28,6 +28,7 @@
 		mpi,telemetry-uart = &uart_telemetry;
 
 		mpi,imu = &lsm6dsl;
+		mpi,mag = &lis2mdl;
 	};
 
 	buttons: buttons {
