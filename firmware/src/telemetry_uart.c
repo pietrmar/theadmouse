@@ -61,7 +61,7 @@ static inline bool uart_host_is_ready()
 }
 
 // NOTE: This cannot be called from interrupt context becasue of the sleep and mutex lock.
-static ssize_t telemetry_uart_write(const uint8_t *data, size_t len)
+ssize_t telemetry_uart_write(const uint8_t *data, size_t len)
 {
 	if (!uart_host_is_ready()) {
 		return -ENOTCONN;
