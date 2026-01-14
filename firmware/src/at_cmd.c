@@ -53,9 +53,9 @@ static int at_cmd_WA(const struct at_cmd_param *arg, void *ctx)
 	if (ret < 0)
 		return ret;
 
-	// TODO: There should be a upper bound on how much to sleep
 	if (ms > 1000) {
-		return -EINVAL;
+		ms = 1000;
+		LOG_WRN("Clamping WA wait time to 1000 ms");
 	}
 
 	k_sleep(K_MSEC(ms));
