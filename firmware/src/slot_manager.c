@@ -423,7 +423,7 @@ int slot_manager_save_current_slot_by_name(const char *name)
 // HACK: This is just for quick testing
 extern int led_set_rgb(int r, int g, int b);
 
-int slot_manager_load_slot_by_index(int idx)
+static int __slot_manager_load_slot_by_index_nolock(int idx)
 {
 	if (idx < 0 || idx >= SLOT_MANAGER_MAX_SLOTS) {
 		return -EINVAL;
@@ -500,6 +500,27 @@ int slot_manager_load_slot_by_index(int idx)
 
 	// This is also just a quick HACK here
 	ret = led_set_rgb(r, g, b);
+
+	return ret;
+}
+
+K_SEM_DEFINE(slot_manager_load_lock, 1, 1);
+int slot_manager_load_slot_by_index(int idx)
+{
+	// When a slot is loaded all the commands inside the file are executed directly and not
+	// enqueued on the command queue. If a settings file contains a slot loading command like
+	// `AT NE` or `AT LO <slotname>` then this would lead to recursive slot loading and for
+	// sure to some issues. Currently it should be impossible for the settings file to contain
+	// such commands, but just in case this ever happens we just prevent it here with this
+	// semaphore.
+	if (k_sem_take(&slot_manager_load_lock, K_NO_WAIT) != 0) {
+		LOG_ERR("Recursive slot loading detected!");
+		return -EBUSY;
+	}
+
+	int ret = __slot_manager_load_slot_by_index_nolock(idx);
+
+	k_sem_give(&slot_manager_load_lock);
 
 	return ret;
 }
