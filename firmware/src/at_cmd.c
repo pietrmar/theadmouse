@@ -79,6 +79,28 @@ static int at_cmd_SC(const struct at_cmd_param *arg, void *ctx)
 	return slot_manager_set_color(col);
 }
 
+
+static struct k_poll_signal generate_report_signal = K_POLL_SIGNAL_INITIALIZER(generate_report_signal);
+
+static void report_timer_expiry_fn(struct k_timer *timer)
+{
+	k_poll_signal_raise(&generate_report_signal, 1);
+}
+K_TIMER_DEFINE(report_timer, report_timer_expiry_fn, NULL);
+
+static int at_cmd_xR(const struct at_cmd_param *arg, void *ctx)
+{
+	bool enable = (bool)ctx;
+
+	if (enable) {
+		k_timer_start(&report_timer, K_MSEC(0), K_MSEC(50));
+	} else {
+		k_timer_stop(&report_timer);
+		k_poll_signal_reset(&generate_report_signal);
+	}
+
+	return 0;
+}
 static int at_cmd_NE(const struct at_cmd_param *arg, void *ctx)
 {
 	// NOTE: The slot manager will directly dispatch AT commands
@@ -267,6 +289,8 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
 	{ MAKE2CC(SC), AT_CMD_PARAM_TYPE_UINT, at_cmd_SC, NULL },
+	{ MAKE2CC(SR), AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)true },
+	{ MAKE2CC(ER), AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)false },
 
 	{ MAKE2CC(SA), AT_CMD_PARAM_TYPE_STR, at_cmd_SA, NULL },
 	{ MAKE2CC(LO), AT_CMD_PARAM_TYPE_STR, at_cmd_LO, NULL },
@@ -345,6 +369,44 @@ static int __at_cmd_dispatch_ptr(const struct at_cmd *cmd, const struct at_cmd_p
 	return cmd->cb(param, cmd->ctx);
 }
 
+
+static struct k_poll_event at_cmd_thread_poll_events[2] = {
+	K_POLL_EVENT_STATIC_INITIALIZER(K_POLL_TYPE_MSGQ_DATA_AVAILABLE, K_POLL_MODE_NOTIFY_ONLY, &at_cmd_queue, 0),
+	K_POLL_EVENT_STATIC_INITIALIZER(K_POLL_TYPE_SIGNAL, K_POLL_MODE_NOTIFY_ONLY, &generate_report_signal, 0),
+};
+
+static int at_cmd_process_next(struct k_msgq *msgq)
+{
+	struct at_cmd_work_item work_item;
+
+	int ret = k_msgq_get(msgq, &work_item, K_NO_WAIT);
+	if (ret < 0)
+		return ret;
+
+	if (work_item.cmd->cb != NULL) {
+		char buf[3];
+		LOG_DBG("Dispatching <%s>", at_code_to_str(work_item.cmd->code, buf));
+
+		ret = __at_cmd_dispatch_ptr(work_item.cmd, &work_item.param);
+		if (ret < 0)
+			LOG_DBG("AT command <%s> failed: %d", at_code_to_str(work_item.cmd->code, buf), ret);
+	} else {
+		char buf[3];
+		LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(work_item.cmd->code, buf));
+		ret = -ENOTSUP;
+	}
+
+	if (work_item.result_ptr)
+		*work_item.result_ptr = ret;
+
+	if (work_item.done_sem)
+		k_sem_give(work_item.done_sem);
+
+	// The function and processing of the command is always successful, and error codes from the actual
+	// AT commands are returned in the `.result_ptr` pointer to the calling path.
+	return 0;
+}
+
 static void at_cmd_thread(void *p1, void *p2, void *p3)
 {
 	ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
@@ -352,30 +414,34 @@ static void at_cmd_thread(void *p1, void *p2, void *p3)
 	LOG_INF("Started AT dispatch thread");
 
 	while (true) {
-		struct at_cmd_work_item work_item;
-		int ret = k_msgq_get(&at_cmd_queue, &work_item, K_FOREVER);
-		if (ret < 0)
-			continue;
+		int ret = k_poll(at_cmd_thread_poll_events, ARRAY_SIZE(at_cmd_thread_poll_events), K_FOREVER);
 
-		if (!work_item.cmd->cb) {
-			char buf[3];
-			// Do not fail here fully but print a warning
-			LOG_WRN("Callback for AT command <%s> not implemented", at_code_to_str(work_item.cmd->code, buf));
+		if (ret < 0) {
+			LOG_WRN("k_poll() failed: %d", ret);
 			continue;
 		}
 
-		char buf[3];
-		LOG_DBG("Dispatching <%s>", at_code_to_str(work_item.cmd->code, buf));
+		if (at_cmd_thread_poll_events[0].state == K_POLL_STATE_MSGQ_DATA_AVAILABLE) {
+			while (at_cmd_process_next(at_cmd_thread_poll_events[0].msgq) == 0) {
+				// Keep going until the queue is empty
+			}
 
-		ret = __at_cmd_dispatch_ptr(work_item.cmd, &work_item.param);
-		if (ret < 0)
-			LOG_DBG("AT command <%s> failed: %d", at_code_to_str(work_item.cmd->code, buf), ret);
+			at_cmd_thread_poll_events[0].state = K_POLL_STATE_NOT_READY;
+		}
 
-		if (work_item.result_ptr)
-			*work_item.result_ptr = ret;
+		if (at_cmd_thread_poll_events[1].state == K_POLL_STATE_SIGNALED) {
+			int signaled, result;
+			k_poll_signal_check(at_cmd_thread_poll_events[1].signal, &signaled, &result);
+			k_poll_signal_reset(at_cmd_thread_poll_events[1].signal);
+			at_cmd_thread_poll_events[1].state = K_POLL_STATE_NOT_READY;
 
-		if (work_item.done_sem)
-			k_sem_give(work_item.done_sem);
+			if (signaled && (result == 1)) {
+				// Currentlty expected format by the WebGUI:
+				//  VALUES:<pressure>,<down>,<up>,<right>,<left>,<x-raw>,<y-raw>,<buttons>,<slot>
+				// TODO: Implement the rest of it
+				at_replyf("VALUES:0,0,0,0,0,0,0,0000,%d", slot_manager_get_active_slot_idx());
+			}
+		}
 	}
 }
 K_THREAD_DEFINE(at_cmd_tid, 2048, at_cmd_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(7), 0, 0);
