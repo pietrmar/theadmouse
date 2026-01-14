@@ -20,6 +20,7 @@ struct slot_settings
 };
 
 int slot_manager_init(void);
+int slot_manager_get_active_slot_idx(void);
 
 // TODO: Consider some nicer "iterator" API or so
 int slot_manager_list_all_slots(slot_printf_fn printf_fn);

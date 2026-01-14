@@ -21,6 +21,12 @@ LOG_MODULE_REGISTER(slot_manager, CONFIG_SLOT_MANAGER_LOG_LEVEL);
 static struct slot_settings active_slot;
 static int active_slot_index = -1;
 
+// NOTE: This is not thread save, but all slot operations, including getting the currently active
+// slot should happen from the AT command thread.
+int slot_manager_get_active_slot_idx(void)
+{
+	return active_slot_index;
+}
 
 int slot_manager_set_color(uint32_t col)
 {
