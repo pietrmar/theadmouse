@@ -436,10 +436,14 @@ static void at_cmd_thread(void *p1, void *p2, void *p3)
 			at_cmd_thread_poll_events[1].state = K_POLL_STATE_NOT_READY;
 
 			if (signaled && (result == 1)) {
+				char buf[128];
+
 				// Currentlty expected format by the WebGUI:
 				//  VALUES:<pressure>,<down>,<up>,<right>,<left>,<x-raw>,<y-raw>,<buttons>,<slot>
 				// TODO: Implement the rest of it
-				at_replyf("VALUES:0,0,0,0,0,0,0,0000,%d", slot_manager_get_active_slot_idx());
+				at_replyf("VALUES:0,0,0,0,0,0,0,%s,%d",
+						button_manager_get_button_state_string(buf, sizeof(buf)),
+						slot_manager_get_active_slot_idx());
 			}
 		}
 	}
