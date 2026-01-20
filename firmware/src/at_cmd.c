@@ -396,6 +396,9 @@ static int at_cmd_process_next(struct k_msgq *msgq)
 		ret = -ENOTSUP;
 	}
 
+	// TODO: If `param->flags` & AT_CMD_PARAM_FLAG_HEAPSTR` then `at_cmd_enqueue_*()` allocated and made a copy
+	// of the string which now needs to be freed.
+
 	if (work_item.result_ptr)
 		*work_item.result_ptr = ret;
 
@@ -475,6 +478,9 @@ int at_cmd_enqueue_and_wait_ptr(const struct at_cmd *cmd, const struct at_cmd_pa
 		.result_ptr = &result,
 	};
 
+	// TODO: If `param->flags` & AT_CMD_PARAM_FLAG_HEAPSTR` then make a slab allocation here and
+	// copy the heap-string. It should be freed once the command has been processed.
+
 	int ret = k_msgq_put(&at_cmd_queue, &work_item, timeout);
 	if (ret < 0) {
 		char buf[3];
@@ -497,6 +503,9 @@ int at_cmd_enqueue_ptr(const struct at_cmd *cmd, const struct at_cmd_param *para
 		.done_sem = NULL,
 		.result_ptr = NULL,
 	};
+
+	// TODO: If `param->flags` & AT_CMD_PARAM_FLAG_HEAPSTR` then make a slab allocation here and
+	// copy the heap-string. It should be freed once the command has been processed.
 
 	int ret = k_msgq_put(&at_cmd_queue, &work_item, timeout);
 	if (ret < 0) {
