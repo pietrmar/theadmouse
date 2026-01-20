@@ -34,11 +34,13 @@ static inline enum at_cmd_param_type at_cmd_param_get_type(const struct at_cmd_p
 
 static inline void at_cmd_param_set_type(struct at_cmd_param *p, enum at_cmd_param_type type)
 {
+	// TODO: If it was a heap-string this is probably the place to free it here before setting
+	// a new type, maybe?
 	p->type = type;
 }
 
-struct at_cmd_param *at_cmd_param_clone(const struct at_cmd_param *p);
-void at_cmd_param_free(struct at_cmd_param *p);
+int at_cmd_param_clone(struct at_cmd_param *dst, const struct at_cmd_param *src, struct k_heap *heap);
+void at_cmd_param_free(struct at_cmd_param *p, struct k_heap *heap);
 
 static inline int at_cmd_param_get_int(const struct at_cmd_param *p, int32_t *out)
 {
@@ -85,6 +87,8 @@ static inline int at_cmd_param_get_str(const struct at_cmd_param *p, const char 
 	return 0;
 }
 
+// TODO: Figure out how to handle heap string allocations and when to allocate and free
+// them.
 static inline int at_cmd_param_set_str(struct at_cmd_param *p, const char *val)
 {
 	if (!p || !val) return -EINVAL;
