@@ -108,6 +108,23 @@ static int at_cmd_NE(const struct at_cmd_param *arg, void *ctx)
 	return slot_manager_load_next_slot();
 }
 
+static int at_cmd_EC(const struct at_cmd_param *arg, void *ctx)
+{
+	const char *s;
+
+	int ret = at_cmd_param_get_str(arg, &s);
+	if (ret < 0)
+		return ret;
+
+	LOG_INF("AT echo: %s", s);
+
+	ret = at_replyf("%s", s);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
 static int at_cmd_SA(const struct at_cmd_param *arg, void *ctx)
 {
 	const char *s;
@@ -297,6 +314,9 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(LA), AT_CMD_PARAM_TYPE_NONE, at_cmd_LA, NULL },
 	{ MAKE2CC(LI), AT_CMD_PARAM_TYPE_NONE, at_cmd_LI, NULL },
 	{ MAKE2CC(NE), AT_CMD_PARAM_TYPE_NONE, at_cmd_NE, NULL },
+
+	// Echo command, not in the original FABI, but added here for debugging purposes
+	{ MAKE2CC(EC), AT_CMD_PARAM_TYPE_STR, at_cmd_EC, NULL },
 
 	{ AT_CMD_INTERNAL_EMPTY_COMMAND, AT_CMD_PARAM_TYPE_NONE, at_cmd_internal_empty_command, NULL },
 	{ AT_CMD_INTERNAL_LOAD_SLOT_INDEX, AT_CMD_PARAM_TYPE_UINT, at_cmd_internal_load_slot_index, NULL },
