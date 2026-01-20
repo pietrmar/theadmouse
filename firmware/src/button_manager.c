@@ -11,6 +11,8 @@ LOG_MODULE_REGISTER(button_manager, CONFIG_BUTTON_MANAGER_LOG_LEVEL);
 
 static const struct device *const btn_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_buttons));
 
+K_HEAP_DEFINE(btn_at_param_heap, 1024);
+
 // TODO: We could just use an invalid/impossible `at_code` of `0x00` to indicate an
 // invalid mapping to save space, but I think for now one simple valid flag is fine.
 // TODO: Maybe consider just storing the code + a callback or so and deal with the
@@ -20,7 +22,7 @@ struct button_mapping {
 	bool valid;
 
 	uint16_t at_code;
-	struct at_cmd_param *at_param;
+	struct at_cmd_param at_param;
 };
 
 // TODO: Access to this table needs to be locked or some clever copy-on-write mechanism
@@ -46,7 +48,9 @@ int button_manager_get_mapping(size_t idx, uint16_t *at_code, struct at_cmd_para
 	}
 
 	*at_code = mapping->at_code;
-	*at_param = mapping->at_param;
+	// TODO: Consider returning a clone with the heap string to prevent race conditions, but we
+	// need to check where `button_manager_get_mapping()` is used.
+	*at_param = &mapping->at_param;
 
 	return 0;
 }
@@ -66,16 +70,15 @@ int button_manager_set_mapping(size_t idx, const uint16_t at_code, const struct 
 	struct button_mapping *mapping = &btn_map[idx];
 
 	if (mapping->valid) {
-		at_cmd_param_free(mapping->at_param);
-		mapping->at_param = NULL;
+		at_cmd_param_free(&mapping->at_param, &btn_at_param_heap);
 		mapping->valid = false;
 	}
 
 	mapping->at_code = at_code;
-	mapping->at_param = at_cmd_param_clone(at_param);
-	if (!mapping->at_param) {
-		LOG_ERR("failed to clone AT cmd params");
-		return -ENOMEM;
+	int ret = at_cmd_param_clone(&mapping->at_param, at_param, &btn_at_param_heap);
+	if (ret < 0) {
+		LOG_ERR("failed to clone AT cmd param: %d", ret);
+		return ret;
 	}
 
 	mapping->valid = true;
@@ -98,8 +101,7 @@ int button_manager_delete_mapping(size_t idx)
 		return 0;
 
 	mapping->valid = false;
-	at_cmd_param_free(mapping->at_param);
-	mapping->at_param = NULL;
+	at_cmd_param_free(&mapping->at_param, &btn_at_param_heap);
 
 	return 0;
 }
@@ -168,7 +170,7 @@ static void on_input(struct input_event *evt, void *user_data)
 	// TODO: `at_cmd_enqueue_code()` will do a copy of the param struct, but unfortunately
 	// not a deep copy, so we need to soemhow handle this in the futre in case we make
 	// full/proper use of heap strings.
-	int ret = at_cmd_enqueue_code(mapping->at_code, mapping->at_param, K_NO_WAIT);
+	int ret = at_cmd_enqueue_code(mapping->at_code, &mapping->at_param, K_NO_WAIT);
 	if (ret < 0) {
 		LOG_ERR("Failed to enqueue AT command: %d", ret);
 	}
