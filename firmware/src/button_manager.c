@@ -165,6 +165,9 @@ static void on_input(struct input_event *evt, void *user_data)
 		return;
 	}
 
+	// TODO: `at_cmd_enqueue_code()` will do a copy of the param struct, but unfortunately
+	// not a deep copy, so we need to soemhow handle this in the futre in case we make
+	// full/proper use of heap strings.
 	int ret = at_cmd_enqueue_code(mapping->at_code, mapping->at_param, K_NO_WAIT);
 	if (ret < 0) {
 		LOG_ERR("Failed to enqueue AT command: %d", ret);
