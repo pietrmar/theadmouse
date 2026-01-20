@@ -104,6 +104,35 @@ int button_manager_delete_mapping(size_t idx)
 	return 0;
 }
 
+static size_t get_button_index(uint16_t code)
+{
+	for (int idx = 0; idx < ARRAY_SIZE(btn_map); idx++) {
+		if (btn_map[idx].code == code)
+			return idx;
+	}
+
+	return -ENOENT;
+}
+
+static atomic_t button_state = ATOMIC_INIT(0);
+
+char *button_manager_get_button_state_string(char *buf, size_t size)
+{
+	atomic_val_t cur_state = atomic_get(&button_state);
+
+	size_t i;
+	for (i = 0; i < button_manager_num_buttons; i++) {
+		if (i >= (size - 1))
+			break;
+
+		buf[i] = cur_state & BIT(i) ? '1' : '0';
+	}
+
+	buf[i] = 0;
+
+	return buf;
+}
+
 static void on_input(struct input_event *evt, void *user_data)
 {
 	LOG_DBG("Got event, device: %s, sync: %u, type: %u, code: %u (%#x), value: %d",
@@ -112,20 +141,27 @@ static void on_input(struct input_event *evt, void *user_data)
 	if (evt->type != INPUT_EV_KEY)
 		return;
 
-	// TODO: For now we only care about down presses
-	if (evt->value == 0)
+	int idx = get_button_index(evt->code);
+	if (idx < 0) {
+		LOG_WRN("No mapping entry for key code %u (%#x)", evt->code, evt->code);
 		return;
-
-	struct button_mapping *mapping = NULL;
-
-	for (int i = 0; i < ARRAY_SIZE(btn_map); i++) {
-		if (btn_map[i].code == evt->code) {
-			mapping = &btn_map[i];
-		}
 	}
 
-	if (mapping == NULL || !mapping->valid) {
-		LOG_WRN("No valid entry found for key code %u (%#x)", evt->code, evt->code);
+	// NOTE: For now we only care about down presses for dispatching AT commands, so just
+	// clear the button_state bit and return here
+	if (evt->value == 0) {
+		atomic_clear_bit(&button_state, idx);
+		return;
+	}
+
+	if (evt->value == 1) {
+		atomic_set_bit(&button_state, idx);
+	}
+
+	struct button_mapping *mapping = &btn_map[idx];
+
+	if (!mapping->valid) {
+		LOG_WRN("Mapping is not valid for key code %u (%#x)", evt->code, evt->code);
 		return;
 	}
 

@@ -8,6 +8,7 @@ int button_manager_set_mapping(size_t idx, const uint16_t at_code, const struct 
 int button_manager_get_mapping(size_t idx, uint16_t *at_code, struct at_cmd_param **at_param);
 int button_manager_delete_mapping(size_t idx);
 
+char *button_manager_get_button_state_string(char *buf, size_t size);
 
 extern const size_t button_manager_num_buttons;
 
