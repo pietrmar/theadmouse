@@ -232,6 +232,25 @@ static int at_cmd_KW(const struct at_cmd_param *arg, void *ctx)
 	return hm_input_write_string(s);
 }
 
+static int at_cmd_KL(const struct at_cmd_param *arg, void *ctx)
+{
+	const char *s;
+
+	// If no parameter was passed then just print the current locale
+	if (at_cmd_param_get_type(arg) == AT_CMD_PARAM_TYPE_NONE)
+		return at_reply(hm_input_get_current_kbd_layout_locale());
+
+	int ret = at_cmd_param_get_str(arg, &s);
+	if (ret < 0)
+		return ret;
+
+	ret = hm_input_set_kbd_layout_locale(s);
+	if (ret < 0)
+		LOG_WRN("Failed to set keyboard layout to: %s", s);
+
+	return ret;
+}
+
 enum mouse_wheel {
 	MOUSE_WHEEL_UP,
 	MOUSE_WHEEL_DOWN,
@@ -336,6 +355,7 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y },
 
 	{ MAKE2CC(KW), AT_CMD_PARAM_TYPE_STR, at_cmd_KW, NULL },
+	{ MAKE2CC(KL), AT_CMD_PARAM_TYPE_STR, at_cmd_KL, NULL },
 
 	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
