@@ -420,6 +420,9 @@ void motion_engine_reset_absolute_hid_pos(void)
 
 static void hid_mouse_thread(void *, void *, void *)
 {
+	float remainder_x = 0.0f;
+	float remainder_y = 0.0f;
+
 	while (true) {
 		k_sleep(K_MSEC(10));
 
@@ -441,11 +444,21 @@ static void hid_mouse_thread(void *, void *, void *)
 		hid_absolute_y += dy;
 		k_spin_unlock(&hid_param_lock, key);
 
-		int16_t idx = roundf(dx);
-		int16_t idy = roundf(dy);
+		// Because we can only transmit whole pixel values and thus we are rounding
+		// to the nearest integer. So there might be a float reminder left which is
+		// up to half a pixel. This mechanism makes sure that this remainder is not
+		// lost and correctly included in the next HID update calculation.
+		remainder_x += dx;
+		remainder_y += dy;
+
+		int16_t idx = roundf(remainder_x);
+		int16_t idy = roundf(remainder_y);
 
 		if (idx != 0 || idy != 0)
 			hm_input_report_mouse_move(idx, idy, K_FOREVER);
+
+		remainder_x -= idx;
+		remainder_y -= idy;
 	}
 }
 K_THREAD_DEFINE(hid_mouse_tid, 2048, hid_mouse_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(5), 0, 0);
