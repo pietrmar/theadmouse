@@ -8,6 +8,7 @@
 #include <strings.h>
 #include <errno.h>
 #include <ctype.h>
+#include <math.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/app_version.h>
@@ -242,6 +243,21 @@ static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 	return hm_input_report_mouse_move(dx, dy, K_FOREVER);
 }
 
+static int at_cmd_Ax(const struct at_cmd_param *arg, void *ctx)
+{
+	uint32_t ui;
+	enum axis axis = (enum axis)(uintptr_t)ctx;
+
+	int ret = at_cmd_param_get_int(arg, &ui);
+	if (ret < 0)
+		return ret;
+
+	// TODO: Technically there is nothing stopping us from using a negative sensitivity,
+	// the motion engin will just flip the axis in that case.
+
+	return motion_engine_set_hid_axis_sensitivity(ui, axis);
+}
+
 // TODO: Instead of handling this ourselved here, add a simple `button_manager_arm()` or so
 // API to separate the concerns better and also check against other things. This could also
 // move the size/index check into the button_manager.
@@ -306,6 +322,9 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(SC), AT_CMD_PARAM_TYPE_UINT, at_cmd_SC, NULL },
 	{ MAKE2CC(SR), AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)true },
 	{ MAKE2CC(ER), AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)false },
+
+	{ MAKE2CC(AX), AT_CMD_PARAM_TYPE_INT, at_cmd_Ax, (void *)AXIS_X },
+	{ MAKE2CC(AY), AT_CMD_PARAM_TYPE_INT, at_cmd_Ax, (void *)AXIS_Y },
 
 	{ MAKE2CC(SA), AT_CMD_PARAM_TYPE_STR, at_cmd_SA, NULL },
 	{ MAKE2CC(LO), AT_CMD_PARAM_TYPE_STR, at_cmd_LO, NULL },
