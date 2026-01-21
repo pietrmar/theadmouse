@@ -246,7 +246,7 @@ static int at_cmd_KL(const struct at_cmd_param *arg, void *ctx)
 
 	ret = hm_input_set_kbd_layout_locale(s);
 	if (ret < 0)
-		LOG_WRN("Failed to set keyboard layout to: %s", s);
+		LOG_WRN("Failed to set keyboard layout to %s: %d", s, ret);
 
 	return ret;
 }
