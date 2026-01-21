@@ -13,6 +13,7 @@
 #include <zephyr/app_version.h>
 #include <zephyr/logging/log.h>
 
+#include "common.h"
 #include "at_cmd.h"
 #include "at_cmd_param.h"
 #include "cmd_uart.h"
@@ -225,21 +226,17 @@ static int at_cmd_Wx(const struct at_cmd_param *arg, void *ctx)
 	return hm_input_report_mouse_wheel(steps, K_FOREVER);
 }
 
-enum mouse_axis {
-	MOUSE_AXIS_X,
-	MOUSE_AXIS_Y,
-};
 static int at_cmd_Mx(const struct at_cmd_param *arg, void *ctx)
 {
 	int d;
-	enum mouse_axis axis = (enum mouse_axis)(uintptr_t)ctx;
+	enum axis axis = (enum axis)(uintptr_t)ctx;
 
 	int ret = at_cmd_param_get_int(arg, &d);
 	if (ret < 0)
 		return ret;
 
-	int16_t dx = axis == MOUSE_AXIS_X ? d : 0;
-	int16_t dy = axis == MOUSE_AXIS_Y ? d : 0;
+	int16_t dx = axis == AXIS_X ? d : 0;
+	int16_t dy = axis == AXIS_Y ? d : 0;
 
 	return hm_input_report_mouse_move(dx, dy, K_FOREVER);
 }
@@ -300,8 +297,8 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(WU), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_UP},
 	{ MAKE2CC(WD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_DOWN},
 
-	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_X},
-	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)MOUSE_AXIS_Y},
+	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_X},
+	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y},
 
 	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
