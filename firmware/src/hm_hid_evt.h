@@ -5,6 +5,15 @@
 // For HID_KEY_* definitions
 #include <zephyr/usb/class/hid.h>
 
+#define HID_KEY_MOD_LCTRL	0xE0
+#define HID_KEY_MOD_LSHIFT	0xE1
+#define HID_KEY_MOD_LALT	0xE2
+#define HID_KEY_MOD_LGUI	0xE3
+#define HID_KEY_MOD_RCTRL	0xE4
+#define HID_KEY_MOD_RSHIFT	0xE5
+#define HID_KEY_MOD_RALT	0xE6
+#define HID_KEY_MOD_RGUI	0xE7
+
 enum hm_hid_evt_type {
 	HM_HID_EVT_KEY,
 
