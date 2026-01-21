@@ -3,8 +3,10 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "button_manager.h"
+#include "motion_engine.h"
 #include "slot_manager.h"
 
 #define MAX_PATH_LEN	255
@@ -375,6 +377,11 @@ static int save_current_slot_by_index(int idx, const char *name)
 	// Serialize the current settings
 	file_printf(&f, "AT SC 0x%06x\n", active_slot.color);
 	file_printf(&f, "AT MM %u\n", active_slot.input_mode);
+
+	int sens_x = (int)round(motion_engine_get_hid_axis_sensitivity(AXIS_X));
+	int sens_y = (int)round(motion_engine_get_hid_axis_sensitivity(AXIS_X));
+	file_printf(&f, "AT AX %d\n", sens_x);
+	file_printf(&f, "AT AY %d\n", sens_y);
 
 	// Serialize the current button configuration
 	for (size_t i = 0; i < button_manager_get_num_buttons(); i++) {
