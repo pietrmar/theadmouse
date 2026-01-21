@@ -104,6 +104,13 @@ static int at_cmd_xR(const struct at_cmd_param *arg, void *ctx)
 
 	return 0;
 }
+
+static int at_cmd_CA(const struct at_cmd_param *arg, void *ctx)
+{
+	motion_engine_reset_absolute_hid_pos();
+	return 0;
+}
+
 static int at_cmd_NE(const struct at_cmd_param *arg, void *ctx)
 {
 	// NOTE: The slot manager will directly dispatch AT commands
@@ -325,6 +332,7 @@ static const struct at_cmd at_cmds[] = {
 
 	{ MAKE2CC(AX), AT_CMD_PARAM_TYPE_INT, at_cmd_Ax, (void *)AXIS_X },
 	{ MAKE2CC(AY), AT_CMD_PARAM_TYPE_INT, at_cmd_Ax, (void *)AXIS_Y },
+	{ MAKE2CC(CA), AT_CMD_PARAM_TYPE_NONE, at_cmd_CA, NULL },
 
 	{ MAKE2CC(SA), AT_CMD_PARAM_TYPE_STR, at_cmd_SA, NULL },
 	{ MAKE2CC(LO), AT_CMD_PARAM_TYPE_STR, at_cmd_LO, NULL },
