@@ -131,7 +131,7 @@ static inline int feed_telemetry(uint32_t sample_id, const struct zsl_vec *a, co
 
 	return telemetry_uart_write(buf, idx);
 #else
-	// NOTE: This is slow, like up to 1.9 ms slow
+	// NOTE: This is slow, like up to 1.9 ms slow, most likely becasue of float formatting
 	return telemetry_uart_printf("S,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n",
 			sample_id,
 			(double)a->data[0], (double)a->data[1], (double)a->data[2],
