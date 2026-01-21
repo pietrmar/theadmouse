@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "button_manager.h"
+#include "headmouse_input.h"
 #include "motion_engine.h"
 #include "slot_manager.h"
 
@@ -382,6 +383,8 @@ static int save_current_slot_by_index(int idx, const char *name)
 	int sens_y = (int)round(motion_engine_get_hid_axis_sensitivity(AXIS_X));
 	file_printf(&f, "AT AX %d\n", sens_x);
 	file_printf(&f, "AT AY %d\n", sens_y);
+
+	file_printf(&f, "AT KL %s\n", hm_input_get_current_kbd_layout_locale());
 
 	// Serialize the current button configuration
 	for (size_t i = 0; i < button_manager_get_num_buttons(); i++) {
