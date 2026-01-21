@@ -731,7 +731,9 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 	}
 
 	// Fail if a parameter is missing
-	if (cmd->param_type != AT_CMD_PARAM_TYPE_NONE && param == NULL) {
+	// HACK: However if we expect a string parameter then an empty string is allowed
+	// TODO: Add some flag to distinguish in the AT command table if an empty string is allowed
+	if (cmd->param_type != AT_CMD_PARAM_TYPE_NONE && cmd->param_type != AT_CMD_PARAM_TYPE_STR && param == NULL) {
 		LOG_WRN("AT cmd <%s> requires a parameter", command);
 		return -EINVAL;
 	}
@@ -751,7 +753,9 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 			ret = at_cmd_param_set_uint(&cmd_param, strtoul(param, NULL, 0));
 			break;
 		case AT_CMD_PARAM_TYPE_STR:
-			ret = at_cmd_param_set_str(&cmd_param, param);
+			// `param` can be NULL when no string parameter was passed
+			if (param != NULL)
+				ret = at_cmd_param_set_str(&cmd_param, param);
 			break;
 		default:
 			LOG_WRN("Unhandled param type %d", cmd->param_type);
