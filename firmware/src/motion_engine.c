@@ -5,6 +5,8 @@
 
 #include <zsl/orientation/orientation.h>
 
+#include "common.h"
+
 #include "headmouse_input.h"
 #include "telemetry_uart.h"
 
@@ -52,10 +54,13 @@ static void imu_trigger_handler(const struct device *dev, const struct sensor_tr
 }
 
 
-static struct zsl_quat cur_orient_q = {
-	.r = 1.0f, .i = 0.0f, .j = 0.0f, .k = 0.0f
-};
-static struct k_spinlock cur_orient_lock;
+// To prevent aliasing effects, the IMU thread calculates the delta motion between samples and
+// accumulates them in the `imu_acuum_[x|y]` accumulator. The HID thread will fetch and clear
+// this accumulator at a lower rate when needed. This ensures we do not "lose" position updates
+// and every IMU update was correctly accumulated.
+static float imu_accum_x = 0.0f;
+static float imu_accum_y = 0.0f;
+static struct k_spinlock imu_accum_lock;
 
 // The plaintext telemetry takes up to 1.9 ms to format and send out
 // TODO: Make this a Kconfig option
@@ -152,9 +157,18 @@ static inline int feed_telemetry(uint32_t sample_id, const struct zsl_vec *a, co
 #define LSM6DSL_GYR_FULL_SCALE	1000
 
 
+
 static void imu_thread(void *, void *, void *)
 {
 	int ret;
+
+	struct zsl_quat q_prev = {
+		.r = 1.0f, .i = 0.0f, .j = 0.0f, .k = 0.0f
+	};
+
+	struct zsl_quat q_curr = {
+		.r = 1.0f, .i = 0.0f, .j = 0.0f, .k = 0.0f
+	};
 
 	// Madgwick setup
 	beta = 0.1;
@@ -170,6 +184,8 @@ static void imu_thread(void *, void *, void *)
 
 	ZSL_VECTOR_DEF(gyro_bias, 3);
 	zsl_vec_init(&gyro_bias);
+
+	bool first_position_estimate = true;
 
 	uint32_t sample_idx = 0;
 	while (true) {
@@ -283,62 +299,11 @@ static void imu_thread(void *, void *, void *)
 
 
 		MadgwickAHRSupdateIMU(gyro_vec[0], gyro_vec[1], gyro_vec[2], accel_vec[0], accel_vec[1], accel_vec[2]);
-		k_spinlock_key_t key = k_spin_lock(&cur_orient_lock);
-		cur_orient_q.r = q0;
-		cur_orient_q.i = q1;
-		cur_orient_q.j = q2;
-		cur_orient_q.k = q3;
-		k_spin_unlock(&cur_orient_lock, key);
 
-
-		if ((sample_idx % TELEMETRY_DECIM_FACTOR) == 0) {
-			struct sensor_value temp;
-			sensor_channel_get(dev_imu, SENSOR_CHAN_DIE_TEMP, &temp);
-			float t = sensor_value_to_float(&temp);
-
-			if (telemetry_mag_valid) {
-				telemetry_mag_valid = false;
-			} else {
-				telemetry_mag_vec[0] = 0.0f;
-				telemetry_mag_vec[1] = 0.0f;
-				telemetry_mag_vec[2] = 0.0f;
-			}
-
-			k_spinlock_key_t key = k_spin_lock(&cur_orient_lock);
-			struct zsl_quat q = cur_orient_q;
-			k_spin_unlock(&cur_orient_lock, key);
-
-			feed_telemetry(sample_idx, &raw_acc, &raw_gyr, &telemetry_mag, &q, t);
-		}
-
-		int64_t t_end = k_uptime_ticks();
-
-		if ((sample_idx % (uint32_t)IMU_SAMPLING_FREQUENCY) == 0) {
-			// LOG_DBG("loop time: %lld us", k_ticks_to_us_near64(t_end - t_start));
-			// LOG_DBG("gyro bias: [%f, %f, %f]", (double)gyro_bias_vec[0], (double)gyro_bias_vec[1], (double)gyro_bias_vec[2]);
-		}
-	}
-}
-// NOTE: `imu_trigger_handler()` should run at `-2`, and the `imu_thread` then one
-// prio lower at `-1`.
-K_THREAD_DEFINE(imu_tid, 2048, imu_thread, NULL, NULL, NULL, K_PRIO_COOP(1), 0, 0);
-
-static void hid_mouse_thread(void *, void *, void *)
-{
-	static struct zsl_quat q_prev = {
-		.r = 1.0f, .i = 0.0f, .j = 0.0f, .k = 0.0f
-	};
-
-	const float sensitivity = 1600.0f;
-	const float dt_nominal = 0.01f;
-
-	int64_t last_move_ts = 0;
-	while (true) {
-		k_sleep(K_MSEC(10));
-
-		k_spinlock_key_t key = k_spin_lock(&cur_orient_lock);
-		struct zsl_quat q_curr = cur_orient_q;
-		k_spin_unlock(&cur_orient_lock, key);
+		q_curr.r = q0;
+		q_curr.i = q1;
+		q_curr.j = q2;
+		q_curr.k = q3;
 
 		// Compute delta rotation:
 		//  q_delta = q_curr * q_prev^(-1)
@@ -360,20 +325,121 @@ static void hid_mouse_thread(void *, void *, void *)
 		float raw_dx = 2.0f * q_delta.k;
 		float raw_dy = 2.0f * q_delta.j;
 #endif
-
-		float dt = 0.01f;
-		int64_t now = k_uptime_ticks();
-		if (last_move_ts != 0) {
-			dt = k_ticks_to_us_near64(now - last_move_ts) / 1000000.0f;
+		// If this was the first position estimate just do not accumulate anything
+		// by setting `raw_dx`, and `raw_dy` to false, becasue on the first iteration
+		// `q_prev` was just set to the identity quaternion.
+		if (first_position_estimate) {
+			first_position_estimate = false;
+			raw_dx = 0.0f;
+			raw_dy = 0.0f;
 		}
-		last_move_ts = now;
 
-		// TODO: Deadzones
-		// TODO: Some filtering
-		// TODO: Acceleration curve, maybe?
+		k_spinlock_key_t key = k_spin_lock(&imu_accum_lock);
+		imu_accum_x -= raw_dx;
+		imu_accum_y += raw_dy;
+		k_spin_unlock(&imu_accum_lock, key);
 
-		float dx = -(sensitivity * (dt / dt_nominal)) * raw_dx;
-		float dy =  (sensitivity * (dt / dt_nominal)) * raw_dy;
+		if ((sample_idx % TELEMETRY_DECIM_FACTOR) == 0) {
+			struct sensor_value temp;
+			sensor_channel_get(dev_imu, SENSOR_CHAN_DIE_TEMP, &temp);
+			float t = sensor_value_to_float(&temp);
+
+			if (telemetry_mag_valid) {
+				telemetry_mag_valid = false;
+			} else {
+				telemetry_mag_vec[0] = 0.0f;
+				telemetry_mag_vec[1] = 0.0f;
+				telemetry_mag_vec[2] = 0.0f;
+			}
+
+			feed_telemetry(sample_idx, &raw_acc, &raw_gyr, &telemetry_mag, &q_curr, t);
+		}
+
+		int64_t t_end = k_uptime_ticks();
+
+		if ((sample_idx % (uint32_t)IMU_SAMPLING_FREQUENCY) == 0) {
+			// LOG_DBG("loop time: %lld us", k_ticks_to_us_near64(t_end - t_start));
+			// LOG_DBG("gyro bias: [%f, %f, %f]", (double)gyro_bias_vec[0], (double)gyro_bias_vec[1], (double)gyro_bias_vec[2]);
+		}
+	}
+}
+// NOTE: `imu_trigger_handler()` should run at `-2`, and the `imu_thread` then one
+// prio lower at `-1`.
+K_THREAD_DEFINE(imu_tid, 2048, imu_thread, NULL, NULL, NULL, K_PRIO_COOP(1), 0, 0);
+
+
+static float hid_sensitiviy_x = 128.0;
+static float hid_sensitiviy_y = 128.0;
+
+static float hid_absolute_x = 0.0f;
+static float hid_absolute_y = 0.0f;
+static struct k_spinlock hid_param_lock;
+
+int motion_engine_get_absolute_hid_pos(float *x, float *y)
+{
+	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
+	*x = hid_absolute_x;
+	*y = hid_absolute_y;
+	k_spin_unlock(&hid_param_lock, key);
+
+	return 0;
+}
+
+int motion_engine_set_hid_axis_sensitivity(float v, enum axis axis)
+{
+	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
+
+	if (axis == AXIS_X)
+		hid_sensitiviy_x = v;
+	else if (axis == AXIS_Y)
+		hid_sensitiviy_y = v;
+
+	k_spin_unlock(&hid_param_lock, key);
+
+	return 0;
+}
+
+float motion_engine_get_hid_axis_sensitivity(enum axis axis)
+{
+	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
+	int v = axis == AXIS_X ? hid_sensitiviy_x : hid_sensitiviy_y;
+	k_spin_unlock(&hid_param_lock, key);
+
+	return v;
+}
+
+// TODO: Depending on what kind of orientation algorithm we use here it might make
+// sense to reset/reinitialize it too.
+void motion_engine_reset_absolute_hid_pos(void)
+{
+	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
+	hid_absolute_x = 0.0f;
+	hid_absolute_y = 0.0f;
+	k_spin_unlock(&hid_param_lock, key);
+}
+
+static void hid_mouse_thread(void *, void *, void *)
+{
+	while (true) {
+		k_sleep(K_MSEC(10));
+
+		float raw_dx = 0.0f;
+		float raw_dy = 0.0f;
+
+		k_spinlock_key_t key = k_spin_lock(&imu_accum_lock);
+		raw_dx = imu_accum_x;
+		raw_dy = imu_accum_y;
+		imu_accum_x = 0.0f;
+		imu_accum_y = 0.0f;
+		k_spin_unlock(&imu_accum_lock, key);
+
+		key = k_spin_lock(&hid_param_lock);
+		float dx = raw_dx * hid_sensitiviy_x;
+		float dy = raw_dy * hid_sensitiviy_y;
+
+		hid_absolute_x += dx;
+		hid_absolute_y += dy;
+		k_spin_unlock(&hid_param_lock, key);
 
 		int16_t idx = roundf(dx);
 		int16_t idy = roundf(dy);
