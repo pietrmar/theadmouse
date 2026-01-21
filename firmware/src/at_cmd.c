@@ -313,16 +313,16 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(WA), AT_CMD_PARAM_TYPE_UINT, at_cmd_WA, NULL },
 	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
 
-	{ MAKE2CC(CL), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_LEFT, .double_click = false}},
-	{ MAKE2CC(CD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_LEFT, .double_click = true}},
-	{ MAKE2CC(CR), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_RIGHT, .double_click = false}},
-	{ MAKE2CC(CM), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){.btn = HM_MOUSE_BTN_MIDDLE, .double_click = false}},
+	{ MAKE2CC(CL), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_LEFT, .double_click = false } },
+	{ MAKE2CC(CD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_LEFT, .double_click = true } },
+	{ MAKE2CC(CR), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_RIGHT, .double_click = false } },
+	{ MAKE2CC(CM), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_MIDDLE, .double_click = false } },
 
-	{ MAKE2CC(WU), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_UP},
-	{ MAKE2CC(WD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_DOWN},
+	{ MAKE2CC(WU), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_UP },
+	{ MAKE2CC(WD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_DOWN },
 
-	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_X},
-	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y},
+	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_X },
+	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y },
 
 	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
