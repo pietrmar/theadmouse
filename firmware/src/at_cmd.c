@@ -221,6 +221,17 @@ static int at_cmd_Cx(const struct at_cmd_param *arg, void *ctx)
 	return ret;
 }
 
+static int at_cmd_KW(const struct at_cmd_param *arg, void *ctx)
+{
+	const char *s;
+
+	int ret = at_cmd_param_get_str(arg, &s);
+	if (ret < 0)
+		return ret;
+
+	return hm_input_write_string(s);
+}
+
 enum mouse_wheel {
 	MOUSE_WHEEL_UP,
 	MOUSE_WHEEL_DOWN,
@@ -323,6 +334,8 @@ static const struct at_cmd at_cmds[] = {
 
 	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_X },
 	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y },
+
+	{ MAKE2CC(KW), AT_CMD_PARAM_TYPE_STR, at_cmd_KW, NULL },
 
 	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
