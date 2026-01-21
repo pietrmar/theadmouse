@@ -1,10 +1,10 @@
 /*
- * German keyboard layout.
+ * Danish keyboard layout.
  */
 
 #include "KeyboardLayout.h"
 
-extern const uint8_t KeyboardLayout_de_DE[128] PROGMEM =
+const uint8_t KeyboardLayout_da_DK[128] =
 {
 	0x00,          // NUL
 	0x00,          // SOH
@@ -42,15 +42,15 @@ extern const uint8_t KeyboardLayout_de_DE[128] PROGMEM =
 	0x2c,          // ' '
 	0x1e|SHIFT,    // !
 	0x1f|SHIFT,    // "
-	0x31,          // #
-	0x21|SHIFT,    // $
+	0x20|SHIFT,    // #
+	0x21|ALT_GR,   // $
 	0x22|SHIFT,    // %
 	0x23|SHIFT,    // &
-	0x31|SHIFT,    // '
+	0x31,          // '
 	0x25|SHIFT,    // (
 	0x26|SHIFT,    // )
-	0x30|SHIFT,    // *
-	0x30,          // +
+	0x31|SHIFT,    // *
+	0x2d,          // +
 	0x36,          // ,
 	0x38,          // -
 	0x37,          // .
@@ -71,7 +71,7 @@ extern const uint8_t KeyboardLayout_de_DE[128] PROGMEM =
 	0x27|SHIFT,    // =
 	0x32|SHIFT,    // >
 	0x2d|SHIFT,    // ?
-	0x14|ALT_GR,   // @
+	0x1f|ALT_GR,   // @
 	0x04|SHIFT,    // A
 	0x05|SHIFT,    // B
 	0x06|SHIFT,    // C
@@ -96,10 +96,10 @@ extern const uint8_t KeyboardLayout_de_DE[128] PROGMEM =
 	0x19|SHIFT,    // V
 	0x1a|SHIFT,    // W
 	0x1b|SHIFT,    // X
-	0x1d|SHIFT,    // Y
-	0x1c|SHIFT,    // Z
+	0x1c|SHIFT,    // Y
+	0x1d|SHIFT,    // Z
 	0x25|ALT_GR,   // [
-	0x2d|ALT_GR,   // bslash
+	0x32|ALT_GR,   // bslash
 	0x26|ALT_GR,   // ]
 	0x00,          // ^  not supported (requires dead key + space)
 	0x38|SHIFT,    // _
@@ -128,11 +128,11 @@ extern const uint8_t KeyboardLayout_de_DE[128] PROGMEM =
 	0x19,          // v
 	0x1a,          // w
 	0x1b,          // x
-	0x1d,          // y
-	0x1c,          // z
+	0x1c,          // y
+	0x1d,          // z
 	0x24|ALT_GR,   // {
-	0x32|ALT_GR,   // |
+	0x2e|ALT_GR,   // |
 	0x27|ALT_GR,   // }
-	0x30|ALT_GR,   // ~
+	0x00,          // ~  not supported (requires dead key + space)
 	0x00           // DEL
 };

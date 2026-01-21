@@ -17,6 +17,17 @@ target_sources(app PRIVATE
 		src/telemetry_uart.c
 
 		src/MadgwickAHRS/MadgwickAHRS.c
+
+		src/keymaps/KeyboardLayout_da_DK.c
+		src/keymaps/KeyboardLayout_de_DE.c
+		src/keymaps/KeyboardLayout_en_US.c
+		src/keymaps/KeyboardLayout_es_ES.c
+		src/keymaps/KeyboardLayout_fr_FR.c
+		src/keymaps/KeyboardLayout_hu_HU.c
+		src/keymaps/KeyboardLayout_it_IT.c
+		src/keymaps/KeyboardLayout_pt_BR.c
+		src/keymaps/KeyboardLayout_pt_PT.c
+		src/keymaps/KeyboardLayout_sv_SE.c
 )
 
 if(CONFIG_LSM6DSL_CUSTOM)

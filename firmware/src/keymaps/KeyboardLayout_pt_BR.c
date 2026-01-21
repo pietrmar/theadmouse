@@ -4,7 +4,7 @@
 
 #include "KeyboardLayout.h"
 
-extern const uint8_t KeyboardLayout_pt_BR[128] PROGMEM =
+const uint8_t KeyboardLayout_pt_BR[128] =
 {
 	0x00,          // NUL
 	0x00,          // SOH

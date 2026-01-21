@@ -1,10 +1,10 @@
 /*
- * Swedish keyboard layout.
+ * Portuguese keyboard layout.
  */
 
 #include "KeyboardLayout.h"
 
-extern const uint8_t KeyboardLayout_sv_SE[128] PROGMEM =
+const uint8_t KeyboardLayout_pt_PT[128] =
 {
 	0x00,          // NUL
 	0x00,          // SOH
@@ -43,14 +43,14 @@ extern const uint8_t KeyboardLayout_sv_SE[128] PROGMEM =
 	0x1e|SHIFT,    // !
 	0x1f|SHIFT,    // "
 	0x20|SHIFT,    // #
-	0x21|ALT_GR,    // $
+	0x21|SHIFT,    // $
 	0x22|SHIFT,    // %
 	0x23|SHIFT,    // &
-	0x31,          // '
+	0x2d,          // '
 	0x25|SHIFT,    // (
 	0x26|SHIFT,    // )
-	0x31|SHIFT,    // *
-	0x2d,          // +
+	0x2f|SHIFT,    // *
+	0x2f,          // +
 	0x36,          // ,
 	0x38,          // -
 	0x37,          // .
@@ -99,7 +99,7 @@ extern const uint8_t KeyboardLayout_sv_SE[128] PROGMEM =
 	0x1c|SHIFT,    // Y
 	0x1d|SHIFT,    // Z
 	0x25|ALT_GR,   // [
-	0x2d|ALT_GR,   // bslash
+	0x35,          // bslash
 	0x26|ALT_GR,   // ]
 	0x00,          // ^  not supported (requires dead key + space)
 	0x38|SHIFT,    // _
@@ -131,7 +131,7 @@ extern const uint8_t KeyboardLayout_sv_SE[128] PROGMEM =
 	0x1c,          // y
 	0x1d,          // z
 	0x24|ALT_GR,   // {
-	0x32|ALT_GR,   // |
+	0x35|SHIFT,    // |
 	0x27|ALT_GR,   // }
 	0x00,          // ~  not supported (requires dead key + space)
 	0x00           // DEL

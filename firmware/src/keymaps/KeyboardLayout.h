@@ -58,10 +58,22 @@
   from the ANSI layout). We handle it by replacing its value by 0x32 in
   the layout arrays.
 */
+#pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
 
 #define SHIFT 0x80
 #define ALT_GR 0xc0
 #define ISO_KEY 0x64
 #define ISO_REPLACEMENT 0x32
+
+extern const uint8_t KeyboardLayout_da_DK[128];
+extern const uint8_t KeyboardLayout_de_DE[128];
+extern const uint8_t KeyboardLayout_en_US[128];
+extern const uint8_t KeyboardLayout_es_ES[128];
+extern const uint8_t KeyboardLayout_fr_FR[128];
+extern const uint8_t KeyboardLayout_hu_HU[128];
+extern const uint8_t KeyboardLayout_it_IT[128];
+extern const uint8_t KeyboardLayout_pt_BR[128];
+extern const uint8_t KeyboardLayout_pt_PT[128];
+extern const uint8_t KeyboardLayout_sv_SE[128];
