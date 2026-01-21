@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+// For HID_KEY_* definitions
+#include <zephyr/usb/class/hid.h>
+
 enum hm_hid_evt_type {
 	HM_HID_EVT_KEY,
 
