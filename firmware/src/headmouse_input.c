@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -85,4 +87,66 @@ int hm_input_report_mouse_btn(enum hm_hid_mouse_btn btn, bool pressed, k_timeout
 	};
 
 	return ble_hid_queue_evt(&evt, timeout);
+}
+
+struct hid_keystroke {
+	uint8_t code;
+	bool shift;
+};
+
+struct hid_keystroke ascii_to_hid_keystroke(char c)
+{
+	struct hid_keystroke keystroke = { .code = 0, .shift = false };
+
+	if (c >= 'a' && c <= 'z') {
+		keystroke.code = (c - 'a') + HID_KEY_A;
+	} else if (c >= 'A' && c <= 'Z') {
+		keystroke.code = (c - 'A') + HID_KEY_A;
+		keystroke.shift = true;
+	} else if (c >= '1' && c <= '9') {
+		keystroke.code = (c - '1') + HID_KEY_1;
+	} else {
+		switch (c) {
+			case '0': keystroke.code = HID_KEY_0;
+			default:
+				LOG_WRN("Cannot convert %c to HID code", c);
+				break;
+		}
+	}
+
+	return keystroke;
+}
+
+int hm_input_write_string(const char *s)
+{
+	bool shift_active = false;
+
+	while (*s) {
+		struct hid_keystroke keystroke = ascii_to_hid_keystroke(*s);
+
+		if (keystroke.code == 0)
+			continue;
+
+		if (keystroke.shift != shift_active) {
+			shift_active = keystroke.shift;
+			hm_input_report_key(HID_KEY_MOD_LSHIFT, shift_active, K_NO_WAIT);
+			k_sleep(K_MSEC(10));
+		}
+
+		// TODO: Error handling
+		hm_input_report_key(keystroke.code, true, K_NO_WAIT);
+		k_sleep(K_MSEC(10));
+		hm_input_report_key(keystroke.code, false, K_NO_WAIT);
+		k_sleep(K_MSEC(10));
+
+		s++;
+
+	}
+
+	if (shift_active) {
+		hm_input_report_key(HID_KEY_MOD_LSHIFT, false, K_NO_WAIT);
+		k_sleep(K_MSEC(10));
+	}
+
+	return 0;
 }
