@@ -20,6 +20,7 @@
 #include "button_manager.h"
 #include "slot_manager.h"
 #include "input_protocol.h"
+#include "motion_engine.h"
 #include "headmouse_input.h"
 
 LOG_MODULE_REGISTER(at, CONFIG_AT_LOG_LEVEL);
@@ -458,10 +459,21 @@ static void at_cmd_thread(void *p1, void *p2, void *p3)
 			if (signaled && (result == 1)) {
 				char buf[128];
 
+				float raw_x, raw_y;
+				ret = motion_engine_get_absolute_hid_pos(&raw_x, &raw_y);
+				if (ret < 0) {
+					LOG_ERR("Failed to get absolute position from motion engine: %d", ret);
+					raw_x = 0.0f;
+					raw_y = 0.0f;
+				}
+
+				int i_raw_x = (int)roundf(raw_x);
+				int i_raw_y = (int)roundf(raw_y);
+
 				// Currentlty expected format by the WebGUI:
 				//  VALUES:<pressure>,<down>,<up>,<right>,<left>,<x-raw>,<y-raw>,<buttons>,<slot>
-				// TODO: Implement the rest of it
-				at_replyf("VALUES:0,0,0,0,0,0,0,%s,%d",
+				at_replyf("VALUES:0,0,0,0,0,%d,%d,%s,%d",
+						i_raw_x, i_raw_y,
 						button_manager_get_button_state_string(buf, sizeof(buf)),
 						slot_manager_get_active_slot_idx());
 			}
