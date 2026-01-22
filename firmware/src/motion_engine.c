@@ -8,6 +8,7 @@
 #include "common.h"
 
 #include "headmouse_input.h"
+#include "input_protocol.h"
 #include "telemetry_uart.h"
 
 #include "MadgwickAHRS/MadgwickAHRS.h"
@@ -367,55 +368,79 @@ static void imu_thread(void *, void *, void *)
 // prio lower at `-1`.
 K_THREAD_DEFINE(imu_tid, 2048, imu_thread, NULL, NULL, NULL, K_PRIO_COOP(1), 0, 0);
 
+struct motion_config {
+	enum input_mode mode;
 
-static float hid_sensitiviy_x = 128.0;
-static float hid_sensitiviy_y = 128.0;
+	float acceleration[2];
+	float deadzone[2];
+	float maximum_speed;
+	float acceleration_time;
+};
 
-static float hid_absolute_x = 0.0f;
-static float hid_absolute_y = 0.0f;
-static struct k_spinlock hid_param_lock;
+struct motion_state {
+	float absolute_pos[2];
+};
 
-int motion_engine_get_absolute_hid_pos(float *x, float *y)
+struct motion_ctx {
+	struct motion_config cfg;
+	struct motion_state state;
+	struct k_spinlock lock;
+};
+
+static struct motion_ctx ctx = {
+	.cfg = {
+		.mode = INPUT_MODE_MOUSE,
+
+		.acceleration = { 128.0f, 128.0f },
+		.deadzone = { 5.0f, 5.0f },
+		.maximum_speed = 50.0f,
+		.acceleration_time = 50.0f,
+	},
+};
+
+int motion_engine_get_absolute_pos(float *x, float *y)
 {
-	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
-	*x = hid_absolute_x;
-	*y = hid_absolute_y;
-	k_spin_unlock(&hid_param_lock, key);
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	*x = ctx.state.absolute_pos[AXIS_X];
+	*y = ctx.state.absolute_pos[AXIS_Y];
+	k_spin_unlock(&ctx.lock, key);
 
 	return 0;
-}
-
-int motion_engine_set_hid_axis_sensitivity(float v, enum axis axis)
-{
-	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
-
-	if (axis == AXIS_X)
-		hid_sensitiviy_x = v;
-	else if (axis == AXIS_Y)
-		hid_sensitiviy_y = v;
-
-	k_spin_unlock(&hid_param_lock, key);
-
-	return 0;
-}
-
-float motion_engine_get_hid_axis_sensitivity(enum axis axis)
-{
-	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
-	int v = axis == AXIS_X ? hid_sensitiviy_x : hid_sensitiviy_y;
-	k_spin_unlock(&hid_param_lock, key);
-
-	return v;
 }
 
 // TODO: Depending on what kind of orientation algorithm we use here it might make
-// sense to reset/reinitialize it too.
-void motion_engine_reset_absolute_hid_pos(void)
+// sense to reset/reinitialize the IMU/orientation estimation state too.
+void motion_engine_reset_absolute_pos(void)
 {
-	k_spinlock_key_t key = k_spin_lock(&hid_param_lock);
-	hid_absolute_x = 0.0f;
-	hid_absolute_y = 0.0f;
-	k_spin_unlock(&hid_param_lock, key);
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	ctx.state.absolute_pos[AXIS_X] = 0.0f;
+	ctx.state.absolute_pos[AXIS_Y] = 0.0f;
+	k_spin_unlock(&ctx.lock, key);
+}
+
+
+int motion_engine_set_acceleration(float v, enum axis axis)
+{
+	if (axis >= ARRAY_SIZE(ctx.cfg.acceleration))
+		return -EINVAL;
+
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	ctx.cfg.acceleration[axis] = v;
+	k_spin_unlock(&ctx.lock, key);
+
+	return 0;
+}
+
+float motion_engine_get_acceleration(enum axis axis)
+{
+	if (axis >= ARRAY_SIZE(ctx.cfg.acceleration))
+		return -EINVAL;
+
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	float v = ctx.cfg.acceleration[axis];
+	k_spin_unlock(&ctx.lock, key);
+
+	return v;
 }
 
 static void hid_mouse_thread(void *, void *, void *)
@@ -436,13 +461,15 @@ static void hid_mouse_thread(void *, void *, void *)
 		imu_accum_y = 0.0f;
 		k_spin_unlock(&imu_accum_lock, key);
 
-		key = k_spin_lock(&hid_param_lock);
-		float dx = raw_dx * hid_sensitiviy_x;
-		float dy = raw_dy * hid_sensitiviy_y;
+		key = k_spin_lock(&ctx.lock);
 
-		hid_absolute_x += dx;
-		hid_absolute_y += dy;
-		k_spin_unlock(&hid_param_lock, key);
+		// TODO: Do something more advanced than just a multiplication by the acceleration
+		float dx = raw_dx * ctx.cfg.acceleration[AXIS_X];
+		float dy = raw_dy * ctx.cfg.acceleration[AXIS_Y];
+
+		ctx.state.absolute_pos[AXIS_X] += dx;
+		ctx.state.absolute_pos[AXIS_Y] += dy;
+		k_spin_unlock(&ctx.lock, key);
 
 		// Because we can only transmit whole pixel values and thus we are rounding
 		// to the nearest integer. So there might be a float reminder left which is
