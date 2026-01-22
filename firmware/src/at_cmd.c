@@ -30,7 +30,7 @@ static int at_cmd_ID(const struct at_cmd_param *arg, void *ctx)
 {
 	// TODO: A current FABI prints the following, so make sure to extend it:
 	// FABI v3.7.1, PressureSensor=None, ForceSensor=None, Board=Raspberry_Pi_Pico_2W, VID=0x2E8A, PID=0xF10F, TotalBytes=1048576, UsedBytes=28672, FreeBytes=1019904, MemoryUsed=2%
-	int ret = at_replyf("%s %s PressureSensor=None ForceSensor=None", CONFIG_APP_PROJECT_NAME, APP_VERSION_STRING);
+	int ret = at_replyf("%s %s PressureSensor=None ForceSensor=IMU", CONFIG_APP_PROJECT_NAME, APP_VERSION_STRING);
 	if (ret < 0)
 		return ret;
 
