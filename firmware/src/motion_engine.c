@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "headmouse_input.h"
-#include "input_protocol.h"
+#include "motion_engine.h"
 #include "telemetry_uart.h"
 
 #include "MadgwickAHRS/MadgwickAHRS.h"
@@ -369,7 +369,7 @@ static void imu_thread(void *, void *, void *)
 K_THREAD_DEFINE(imu_tid, 2048, imu_thread, NULL, NULL, NULL, K_PRIO_COOP(1), 0, 0);
 
 struct motion_config {
-	enum input_mode mode;
+	enum mouse_mode mouse_mode;
 
 	float acceleration[2];
 	float deadzone[2];
@@ -389,7 +389,7 @@ struct motion_ctx {
 
 static struct motion_ctx ctx = {
 	.cfg = {
-		.mode = INPUT_MODE_MOUSE,
+		.mouse_mode = MOUSE_MODE_MOUSE,
 
 		.acceleration = { 128.0f, 128.0f },
 		.deadzone = { 5.0f, 5.0f },
@@ -397,6 +397,27 @@ static struct motion_ctx ctx = {
 		.acceleration_time = 50.0f,
 	},
 };
+
+enum mouse_mode motion_engine_get_mouse_mode(void)
+{
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	enum mouse_mode m = ctx.cfg.mouse_mode;
+	k_spin_unlock(&ctx.lock, key);
+
+	return m;
+}
+
+int motion_engine_set_mouse_mode(enum mouse_mode m)
+{
+	if (m >= MOUSE_MODE_MAX)
+		return -EINVAL;
+
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	ctx.cfg.mouse_mode = m;
+	k_spin_unlock(&ctx.lock, key);
+
+	return 0;
+}
 
 int motion_engine_get_absolute_pos(float *x, float *y)
 {
