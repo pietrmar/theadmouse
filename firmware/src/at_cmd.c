@@ -107,7 +107,7 @@ static int at_cmd_xR(const struct at_cmd_param *arg, void *ctx)
 
 static int at_cmd_CA(const struct at_cmd_param *arg, void *ctx)
 {
-	motion_engine_reset_absolute_hid_pos();
+	motion_engine_reset_absolute_pos();
 	return 0;
 }
 
@@ -292,7 +292,7 @@ static int at_cmd_Ax(const struct at_cmd_param *arg, void *ctx)
 	// TODO: Technically there is nothing stopping us from using a negative sensitivity,
 	// the motion engin will just flip the axis in that case.
 
-	return motion_engine_set_hid_axis_sensitivity(ui, axis);
+	return motion_engine_set_acceleration(ui, axis);
 }
 
 // TODO: Instead of handling this ourselved here, add a simple `button_manager_arm()` or so
@@ -520,7 +520,7 @@ static void at_cmd_thread(void *p1, void *p2, void *p3)
 				char buf[128];
 
 				float raw_x, raw_y;
-				ret = motion_engine_get_absolute_hid_pos(&raw_x, &raw_y);
+				ret = motion_engine_get_absolute_pos(&raw_x, &raw_y);
 				if (ret < 0) {
 					LOG_ERR("Failed to get absolute position from motion engine: %d", ret);
 					raw_x = 0.0f;
