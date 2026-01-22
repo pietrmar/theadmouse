@@ -37,19 +37,6 @@ int slot_manager_set_color(uint32_t col)
 	return 0;
 }
 
-int slot_manager_set_input_mode(enum input_mode mode)
-{
-	if (!input_mode_valid(mode))
-		return -EINVAL;
-
-	active_slot.input_mode = mode;
-
-	// TODO: Implement this
-	LOG_WRN("%s not implemented", __func__);
-
-	return 0;
-}
-
 // NOTE: This does not create directories recursively, but we
 // do not want a deep hieararchy anyway as directories are
 // expensive on LittleFS.
@@ -375,9 +362,9 @@ static int save_current_slot_by_index(int idx, const char *name)
 	// Write the slot name
 	file_printf(&f, "%s\n", name);
 
-	// Serialize the current settings
+	// Serialize all the current settings
 	file_printf(&f, "AT SC 0x%06x\n", active_slot.color);
-	file_printf(&f, "AT MM %u\n", active_slot.input_mode);
+	file_printf(&f, "AT MM %u\n", motion_engine_get_mouse_mode());
 
 	int accel_x = (int)round(motion_engine_get_acceleration(AXIS_X));
 	int accel_y = (int)round(motion_engine_get_acceleration(AXIS_Y));
@@ -580,7 +567,6 @@ int slot_manager_load_next_slot(void)
 static void reset_active_slot(void)
 {
 	active_slot.color = 0x00000000;
-	active_slot.input_mode = INPUT_MODE_MOUSE;
 	// TODO: Also maybe call into button manager to reset all mappings
 }
 
