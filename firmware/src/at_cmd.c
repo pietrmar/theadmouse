@@ -20,7 +20,6 @@
 #include "cmd_uart.h"
 #include "button_manager.h"
 #include "slot_manager.h"
-#include "input_protocol.h"
 #include "motion_engine.h"
 #include "headmouse_input.h"
 
@@ -45,7 +44,7 @@ static int at_cmd_MM(const struct at_cmd_param *arg, void *ctx)
 	if (ret < 0)
 		return ret;
 
-	return slot_manager_set_input_mode((enum input_mode)p);
+	return motion_engine_set_mouse_mode((enum mouse_mode)p);
 }
 
 static int at_cmd_WA(const struct at_cmd_param *arg, void *ctx)
