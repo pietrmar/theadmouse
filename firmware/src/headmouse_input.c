@@ -179,34 +179,25 @@ int hm_input_write_string(const char *s)
 		if (keystroke.shift != shift_active) {
 			shift_active = keystroke.shift;
 			hm_input_report_key(HID_KEY_MOD_LSHIFT, shift_active, K_NO_WAIT);
-			k_sleep(K_MSEC(10));
 		}
 
 		if (keystroke.altgr != altgr_active) {
 			altgr_active = keystroke.altgr;
 			hm_input_report_key(HID_KEY_MOD_RALT, altgr_active, K_NO_WAIT);
-			k_sleep(K_MSEC(10));
 		}
 
 		hm_input_report_key(keystroke.code, true, K_NO_WAIT);
-		k_sleep(K_MSEC(10));
-
 		hm_input_report_key(keystroke.code, false, K_NO_WAIT);
-		k_sleep(K_MSEC(10));
 
 		s++;
 
 	}
 
-	if (shift_active) {
+	if (shift_active)
 		hm_input_report_key(HID_KEY_MOD_LSHIFT, false, K_NO_WAIT);
-		k_sleep(K_MSEC(10));
-	}
 
-	if (altgr_active) {
+	if (altgr_active)
 		hm_input_report_key(HID_KEY_MOD_RALT, false, K_NO_WAIT);
-		k_sleep(K_MSEC(10));
-	}
 
 	return 0;
 }
