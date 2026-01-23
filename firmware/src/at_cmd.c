@@ -291,6 +291,18 @@ static int at_cmd_Ax(const struct at_cmd_param *arg, void *ctx)
 	return motion_engine_set_acceleration(ui, axis);
 }
 
+static int at_cmd_Dx(const struct at_cmd_param *arg, void *ctx)
+{
+	uint32_t ui;
+	enum axis axis = (enum axis)(uintptr_t)ctx;
+
+	int ret = at_cmd_param_get_uint(arg, &ui);
+	if (ret < 0)
+		return ret;
+
+	return motion_engine_set_deadzone(ui, axis);
+}
+
 // TODO: Instead of handling this ourselved here, add a simple `button_manager_arm()` or so
 // API to separate the concerns better and also check against other things. This could also
 // move the size/index check into the button_manager.
@@ -361,6 +373,8 @@ static const struct at_cmd at_cmds[] = {
 
 	{ MAKE2CC(AX), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_Ax, (void *)AXIS_X },
 	{ MAKE2CC(AY), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_Ax, (void *)AXIS_Y },
+	{ MAKE2CC(DX), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_Dx, (void *)AXIS_X },
+	{ MAKE2CC(DY), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_Dx, (void *)AXIS_Y },
 	{ MAKE2CC(CA), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_CA, NULL },
 
 	{ MAKE2CC(SA), 0, AT_CMD_PARAM_TYPE_STR, at_cmd_SA, NULL },
