@@ -496,41 +496,50 @@ static void hid_mouse_thread(void *, void *, void *)
 	while (true) {
 		k_sleep(K_MSEC(10));
 
-		float raw_dx = 0.0f;
-		float raw_dy = 0.0f;
-
 		k_spinlock_key_t key = k_spin_lock(&imu_accum_lock);
-		raw_dx = imu_accum_x;
-		raw_dy = imu_accum_y;
+		float raw_dx = imu_accum_x;
+		float raw_dy = imu_accum_y;
 		imu_accum_x = 0.0f;
 		imu_accum_y = 0.0f;
 		k_spin_unlock(&imu_accum_lock, key);
 
+		// Make a "snapshot" of the config
 		key = k_spin_lock(&ctx.lock);
-
-		// TODO: Do something more advanced than just a multiplication by the acceleration
-		float dx = raw_dx * ctx.cfg.acceleration[AXIS_X];
-		float dy = raw_dy * ctx.cfg.acceleration[AXIS_Y];
-
-		ctx.state.absolute_pos[AXIS_X] += dx;
-		ctx.state.absolute_pos[AXIS_Y] += dy;
+		struct motion_config cfg = ctx.cfg;
 		k_spin_unlock(&ctx.lock, key);
 
-		// Because we can only transmit whole pixel values and thus we are rounding
-		// to the nearest integer. So there might be a float reminder left which is
-		// up to half a pixel. This mechanism makes sure that this remainder is not
-		// lost and correctly included in the next HID update calculation.
-		remainder_x += dx;
-		remainder_y += dy;
+		// TODO: Do something more advanced than just a multiplication by the acceleration
+		float move_dx = raw_dx * cfg.acceleration[AXIS_X];
+		float move_dy = raw_dy * cfg.acceleration[AXIS_Y];
 
-		int16_t idx = roundf(remainder_x);
-		int16_t idy = roundf(remainder_y);
+		// Update the absolute position and also make a snapshot of it for further processing
+		key = k_spin_lock(&ctx.lock);
+		ctx.state.absolute_pos[AXIS_X] += move_dx;
+		ctx.state.absolute_pos[AXIS_Y] += move_dy;
 
-		if (idx != 0 || idy != 0)
-			hm_input_report_mouse_move(idx, idy, K_FOREVER);
+		struct motion_state state = ctx.state;
+		k_spin_unlock(&ctx.lock, key);
 
-		remainder_x -= idx;
-		remainder_y -= idy;
+		if (cfg.mouse_mode == MOUSE_MODE_MOUSE) {
+			// Because we can only transmit whole pixel values and thus we are rounding
+			// to the nearest integer. So there might be a float reminder left which is
+			// up to half a pixel. This mechanism makes sure that this remainder is not
+			// lost and correctly included in the next HID update calculation.
+			// TODO: Figure out how to keep/handle this correctly across mode changes
+			remainder_x += move_dx;
+			remainder_y += move_dy;
+
+			int16_t idx = roundf(remainder_x);
+			int16_t idy = roundf(remainder_y);
+
+			if (idx != 0 || idy != 0)
+				hm_input_report_mouse_move(idx, idy, K_FOREVER);
+
+			remainder_x -= idx;
+			remainder_y -= idy;
+		} else if (cfg.mouse_mode == MOUSE_MODE_ALT) {
+			// TODO: Implement the alternate mode
+		}
 	}
 }
 K_THREAD_DEFINE(hid_mouse_tid, 2048, hid_mouse_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(5), 0, 0);
