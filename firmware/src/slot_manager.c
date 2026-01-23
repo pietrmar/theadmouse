@@ -366,10 +366,15 @@ static int save_current_slot_by_index(int idx, const char *name)
 	file_printf(&f, "AT SC 0x%06x\n", active_slot.color);
 	file_printf(&f, "AT MM %u\n", motion_engine_get_mouse_mode());
 
-	int accel_x = (int)round(motion_engine_get_acceleration(AXIS_X));
-	int accel_y = (int)round(motion_engine_get_acceleration(AXIS_Y));
-	file_printf(&f, "AT AX %d\n", accel_x);
-	file_printf(&f, "AT AY %d\n", accel_y);
+	int val_x = (int)round(motion_engine_get_acceleration(AXIS_X));
+	int val_y = (int)round(motion_engine_get_acceleration(AXIS_Y));
+	file_printf(&f, "AT AX %d\n", val_x);
+	file_printf(&f, "AT AY %d\n", val_y);
+
+	val_x = (int)round(motion_engine_get_deadzone(AXIS_X));
+	val_y = (int)round(motion_engine_get_deadzone(AXIS_Y));
+	file_printf(&f, "AT DX %d\n", val_x);
+	file_printf(&f, "AT DY %d\n", val_y);
 
 	file_printf(&f, "AT KL %s\n", hm_input_get_current_kbd_layout_locale());
 
