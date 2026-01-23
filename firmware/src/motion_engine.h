@@ -25,5 +25,8 @@ int motion_engine_set_mouse_mode(enum mouse_mode m);
 int motion_engine_set_acceleration(float v, enum axis axis);
 float motion_engine_get_acceleration(enum axis axis);
 
+int motion_engine_set_deadzone(float v, enum axis axis);
+float motion_engine_get_deadzone(enum axis axis);
+
 void motion_engine_reset_absolute_pos(void);
 int motion_engine_get_absolute_pos(float *x, float *y);

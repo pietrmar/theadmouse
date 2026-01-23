@@ -464,6 +464,30 @@ float motion_engine_get_acceleration(enum axis axis)
 	return v;
 }
 
+int motion_engine_set_deadzone(float v, enum axis axis)
+{
+	if (axis >= ARRAY_SIZE(ctx.cfg.deadzone))
+		return -EINVAL;
+
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	ctx.cfg.deadzone[axis] = v;
+	k_spin_unlock(&ctx.lock, key);
+
+	return 0;
+}
+
+float motion_engine_get_deadzone(enum axis axis)
+{
+	if (axis >= ARRAY_SIZE(ctx.cfg.deadzone))
+		return -EINVAL;
+
+	k_spinlock_key_t key = k_spin_lock(&ctx.lock);
+	float v = ctx.cfg.deadzone[axis];
+	k_spin_unlock(&ctx.lock, key);
+
+	return v;
+}
+
 static void hid_mouse_thread(void *, void *, void *)
 {
 	float remainder_x = 0.0f;
