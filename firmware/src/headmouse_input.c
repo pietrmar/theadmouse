@@ -111,25 +111,19 @@ static const struct kbd_layout_entry kbd_layout_table[] = {
 };
 
 // The default is `en_US`
-static const struct kbd_layout_entry *current_kbd_layout = &kbd_layout_table[2];
-static struct k_spinlock current_kbd_layout_lock;
+static atomic_ptr_t current_kbd_layout = (atomic_ptr_t)&kbd_layout_table[2];
 
 const char *hm_input_get_current_kbd_layout_locale(void)
 {
-	k_spinlock_key_t key = k_spin_lock(&current_kbd_layout_lock);
-	const char *locale = current_kbd_layout->locale;
-	k_spin_unlock(&current_kbd_layout_lock, key);
-
-	return locale;
+	const struct kbd_layout_entry *layout = (const struct kbd_layout_entry *)atomic_ptr_get(&current_kbd_layout);
+	return layout->locale;
 }
 
 int hm_input_set_kbd_layout_locale(const char *locale)
 {
 	for (size_t i = 0; i < ARRAY_SIZE(kbd_layout_table); i++) {
 		if (strcmp(locale, kbd_layout_table[i].locale) == 0) {
-			k_spinlock_key_t key = k_spin_lock(&current_kbd_layout_lock);
-			current_kbd_layout = &kbd_layout_table[i];
-			k_spin_unlock(&current_kbd_layout_lock, key);
+			atomic_ptr_set(&current_kbd_layout, (atomic_ptr_t)&kbd_layout_table[i]);
 			return 0;
 		}
 	}
@@ -150,7 +144,8 @@ struct hid_keystroke ascii_to_hid_keystroke(unsigned char c)
 	if (c >= 128)
 		return keystroke;
 
-	uint8_t k = current_kbd_layout->layout[c];
+	const struct kbd_layout_entry *layout = (const struct kbd_layout_entry *)atomic_ptr_get(&current_kbd_layout);
+	uint8_t k = layout->layout[c];
 
 	if ((k & ALT_GR) == ALT_GR) {
 		keystroke.altgr = true;
