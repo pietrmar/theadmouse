@@ -220,6 +220,39 @@ static int at_cmd_Cx(const struct at_cmd_param *arg, void *ctx)
 	return ret;
 }
 
+static int at_cmd_KP(const struct at_cmd_param *arg, void *ctx)
+{
+	const uint8_t *keys;
+
+	int len = at_cmd_param_get_keys(arg, &keys);
+	if (len < 0)
+		return len;
+
+	for (size_t i = 0; i < len; i++) {
+		if (keys[i] == 0)
+			break;
+
+		int code = hm_input_icode_to_hid(keys[i]);
+		if (code < 0)
+			continue;
+
+		hm_input_report_key(code, true, K_NO_WAIT);
+	}
+
+	for (size_t i = 0; i < len; i++) {
+		if (keys[i] == 0)
+			break;
+
+		int code = hm_input_icode_to_hid(keys[i]);
+		if (code < 0)
+			continue;
+
+		hm_input_report_key(code, false, K_NO_WAIT);
+	}
+
+	return 0;
+}
+
 static int at_cmd_KW(const struct at_cmd_param *arg, void *ctx)
 {
 	const char *s;
@@ -362,6 +395,7 @@ static const struct at_cmd at_cmds[] = {
 	{ MAKE2CC(MX), 0, AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_X },
 	{ MAKE2CC(MY), 0, AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y },
 
+	{ MAKE2CC(KP), 0, AT_CMD_PARAM_TYPE_KEYS, at_cmd_KP, NULL },
 	{ MAKE2CC(KW), 0, AT_CMD_PARAM_TYPE_STR, at_cmd_KW, NULL },
 	{ MAKE2CC(KL), AT_CMD_FLAG_OPT_PARAM, AT_CMD_PARAM_TYPE_STR, at_cmd_KL, NULL },
 
