@@ -4,12 +4,14 @@
 #include <string.h>
 
 #define AT_CMD_PARAM_INLINE_STR_SIZE	16
+#define AT_CMD_PARAM_MAX_KEYS		16
 
 enum at_cmd_param_type {
 	AT_CMD_PARAM_TYPE_NONE	= 0,
 	AT_CMD_PARAM_TYPE_INT,
 	AT_CMD_PARAM_TYPE_UINT,
 	AT_CMD_PARAM_TYPE_STR,
+	AT_CMD_PARAM_TYPE_KEYS,
 };
 
 enum at_cmd_param_flags {
@@ -27,6 +29,7 @@ struct at_cmd_param {
 		uint32_t ui;
 		char is[AT_CMD_PARAM_INLINE_STR_SIZE];
 		char *hs;
+		uint8_t keys[AT_CMD_PARAM_MAX_KEYS];
 	} val;
 };
 
@@ -102,5 +105,28 @@ static inline int at_cmd_param_set_str(struct at_cmd_param *p, const char *val)
 	}
 	at_cmd_param_set_type(p, AT_CMD_PARAM_TYPE_STR);
 	memcpy(p->val.is, val, len + 1);
+	return 0;
+}
+
+static inline int at_cmd_param_get_keys(const struct at_cmd_param *p, const uint8_t **out)
+{
+	if (!p || !out) return -EINVAL;
+	if (at_cmd_param_get_type(p) != AT_CMD_PARAM_TYPE_KEYS) return -EINVAL;
+
+	*out = p->val.keys;
+
+	return AT_CMD_PARAM_MAX_KEYS;
+}
+
+static inline int at_cmd_param_set_keys(struct at_cmd_param *p, uint8_t *val, size_t len)
+{
+	if (!p || !val) return -EINVAL;
+
+	if (len > AT_CMD_PARAM_MAX_KEYS) {
+		return -EOVERFLOW;
+	}
+	at_cmd_param_set_type(p, AT_CMD_PARAM_TYPE_KEYS);
+	memcpy(p->val.keys, val, len);
+
 	return 0;
 }
