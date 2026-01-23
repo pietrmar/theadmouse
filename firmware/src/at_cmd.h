@@ -8,7 +8,10 @@
 #define AT_LINE_MAX	255
 #define AT_EOL		"\r\n"
 
-#define AT_FLAG_PARSER_ALLOW_NO_PREFIX		(1 << 0)
+enum at_parser_flags {
+	AT_PARSER_FLAG_NONE		= 0,
+	AT_PARSER_FLAG_ALLOW_NO_PREFIX	= (1 << 0),
+};
 
 enum at_cmd_internal {
 	AT_CMD_INTERNAL_BIT		= 0x8000u,
@@ -57,11 +60,11 @@ struct at_cmd {
 };
 
 // TODO: Remove this API, callers should just manually run parse + enqueue
-int at_handle_line_inplace(char *s, uint32_t flags);
-int at_handle_line_copy(const char *s, uint32_t flags);
+int at_handle_line_inplace(char *s, enum at_parser_flags flags);
+int at_handle_line_copy(const char *s, enum at_parser_flags flags);
 
-int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
-int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags);
+int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, enum at_parser_flags flags);
+int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, enum at_parser_flags flags);
 
 // TODO: Remove the `at_cmd_*_code()` variant of the API
 

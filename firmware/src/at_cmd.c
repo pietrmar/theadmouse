@@ -663,7 +663,7 @@ int at_cmd_dispatch_code(const uint16_t code, const struct at_cmd_param *param)
 // NOTE: If we just got a plain AT command without any parameters or so then this will return NULL and `*out_cmd = NULL`.
 // NOTE: The assigned `*out_cmd_param` is not deep copied, so if you nede to keep it alive make sure to use `at_cmd_param_clone()`
 // TODO: Maybe add a flag like `AT_FLAG_CLONE_PARAMS` that makes a deep-copy if needed.
-int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags)
+int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, enum at_parser_flags flags)
 {
 	if (!s || !out_cmd || !out_cmd_param)
 		return -EINVAL;
@@ -702,7 +702,7 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 		s = ltrim(s);
 	} else {
 		// No AT-prefix found, check if allowed by flag
-		if (!(flags & AT_FLAG_PARSER_ALLOW_NO_PREFIX))
+		if (!(flags & AT_PARSER_FLAG_ALLOW_NO_PREFIX))
 			return -EINVAL;
 	}
 
@@ -792,7 +792,7 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 	return 0;
 }
 
-int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, uint32_t flags)
+int at_parse_line_copy(const char *s, const struct at_cmd **out_cmd, struct at_cmd_param *out_cmd_param, enum at_parser_flags flags)
 {
 	if (!s || !*s || !out_cmd || !out_cmd_param)
 		return -EINVAL;
@@ -861,7 +861,7 @@ int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const stru
 	return 0;
 }
 
-int at_handle_line_inplace(char *s, uint32_t flags)
+int at_handle_line_inplace(char *s, enum at_parser_flags flags)
 {
 	const struct at_cmd *cmd = NULL;
 	struct at_cmd_param cmd_param = { 0 };
@@ -877,7 +877,7 @@ int at_handle_line_inplace(char *s, uint32_t flags)
 	return at_cmd_enqueue_ptr(cmd, &cmd_param, K_FOREVER);
 }
 
-int at_handle_line_copy(const char *s, uint32_t flags)
+int at_handle_line_copy(const char *s, enum at_parser_flags flags)
 {
 	if (!s || !*s)
 		return -EINVAL;
