@@ -6,17 +6,20 @@
 #define AT_CMD_PARAM_INLINE_STR_SIZE	16
 
 enum at_cmd_param_type {
-	AT_CMD_PARAM_TYPE_NONE,
+	AT_CMD_PARAM_TYPE_NONE	= 0,
 	AT_CMD_PARAM_TYPE_INT,
 	AT_CMD_PARAM_TYPE_UINT,
 	AT_CMD_PARAM_TYPE_STR,
 };
 
-#define AT_CMD_PARAM_FLAG_HEAPSTR	(1 << 0)
+enum at_cmd_param_flags {
+	AT_CMD_PARAM_FLAG_NONE		= 0,
+	AT_CMD_PARAM_FLAG_HEAPSTR	= (1 << 0),
+};
 
 struct at_cmd_param {
 	enum at_cmd_param_type type;
-	uint8_t flags;
+	enum at_cmd_param_flags flags;
 
 	// TODO: Drop the `val` and just access the union members directly
 	union {
