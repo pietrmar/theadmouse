@@ -2,6 +2,7 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/input/input.h>
 
 #include <zsl/orientation/orientation.h>
 
@@ -488,10 +489,14 @@ float motion_engine_get_deadzone(enum axis axis)
 	return v;
 }
 
+static const struct device *const btn_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_buttons));
+
 static void hid_mouse_thread(void *, void *, void *)
 {
+	// TODO: Reset all of these on mode change
 	float remainder_x = 0.0f;
 	float remainder_y = 0.0f;
+	bool alt_mode_hits[4] = { false };
 
 	while (true) {
 		k_sleep(K_MSEC(10));
@@ -538,7 +543,30 @@ static void hid_mouse_thread(void *, void *, void *)
 			remainder_x -= idx;
 			remainder_y -= idy;
 		} else if (cfg.mouse_mode == MOUSE_MODE_ALT) {
-			// TODO: Implement the alternate mode
+			bool hit[4] = { false };
+
+			// TODO: Probably we would want to add a bit of hysteresis here
+
+			if (state.absolute_pos[AXIS_X] > cfg.deadzone[AXIS_X])
+				hit[DIR_RIGHT] = true;
+			else if (state.absolute_pos[AXIS_X] < -cfg.deadzone[AXIS_X])
+				hit[DIR_LEFT] = true;
+
+			if (state.absolute_pos[AXIS_Y] > cfg.deadzone[AXIS_Y])
+				hit[DIR_DOWN] = true;
+			else if (state.absolute_pos[AXIS_Y] < -cfg.deadzone[AXIS_Y])
+				hit[DIR_UP] = true;
+
+			static const uint16_t zephyr_codes[4] = { INPUT_KEY_UP, INPUT_KEY_DOWN, INPUT_KEY_LEFT, INPUT_KEY_RIGHT };
+
+			for (int i = 0; i < 4; i++) {
+				bool is_hit = hit[i];
+
+				if (alt_mode_hits[i] != is_hit) {
+					alt_mode_hits[i] = is_hit;
+					input_report_key(btn_dev, zephyr_codes[i], is_hit ? 1 : 0, true, K_FOREVER);
+				}
+			}
 		}
 	}
 }
