@@ -479,8 +479,11 @@ static int __at_cmd_dispatch_ptr(const struct at_cmd *cmd, const struct at_cmd_p
 	// TODO: Use some kind of "arming" API or so
 	// TODO: We probably want to disallow certain commands to be mapped on buttons
 	if (set_slot_command != -1) {
-		int ret = button_manager_set_mapping(set_slot_command, cmd->code, param);
+		uint16_t at_code_release = 0;
+		if (cmd->flags & AT_CMD_FLAG_HOLD)
+			at_code_release = (uint32_t)cmd->ctx;
 
+		int ret = button_manager_set_mapping(set_slot_command, cmd->code, at_code_release, param);
 		if (ret < 0)
 			LOG_ERR("Failed to set button mapping for slot %d: %d", set_slot_command, ret);
 
