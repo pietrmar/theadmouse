@@ -23,6 +23,8 @@ struct button_mapping {
 
 	uint16_t at_code;
 	struct at_cmd_param at_param;
+
+	uint16_t at_code_release;
 };
 
 // TODO: Access to this table needs to be locked or some clever copy-on-write mechanism
@@ -55,7 +57,7 @@ int button_manager_get_mapping(size_t idx, uint16_t *at_code, struct at_cmd_para
 	return 0;
 }
 
-int button_manager_set_mapping(size_t idx, const uint16_t at_code, const struct at_cmd_param *at_param)
+int button_manager_set_mapping(size_t idx, const uint16_t at_code, const uint16_t at_code_release, const struct at_cmd_param *at_param)
 {
 	char buf[3];
 
@@ -75,6 +77,7 @@ int button_manager_set_mapping(size_t idx, const uint16_t at_code, const struct 
 	}
 
 	mapping->at_code = at_code;
+	mapping->at_code_release = at_code_release;
 	int ret = at_cmd_param_clone(&mapping->at_param, at_param, &btn_at_param_heap);
 	if (ret < 0) {
 		LOG_ERR("failed to clone AT cmd param: %d", ret);
@@ -149,16 +152,10 @@ static void on_input(struct input_event *evt, void *user_data)
 		return;
 	}
 
-	// NOTE: For now we only care about down presses for dispatching AT commands, so just
-	// clear the button_state bit and return here
-	if (evt->value == 0) {
-		atomic_clear_bit(&button_state, idx);
-		return;
-	}
-
-	if (evt->value == 1) {
+	if (evt->value == 1)
 		atomic_set_bit(&button_state, idx);
-	}
+	else if (evt->value == 0)
+		atomic_clear_bit(&button_state, idx);
 
 	struct button_mapping *mapping = &btn_map[idx];
 
@@ -167,12 +164,18 @@ static void on_input(struct input_event *evt, void *user_data)
 		return;
 	}
 
-	// TODO: `at_cmd_enqueue_code()` will do a copy of the param struct, but unfortunately
-	// not a deep copy, so we need to soemhow handle this in the futre in case we make
-	// full/proper use of heap strings.
-	int ret = at_cmd_enqueue_code(mapping->at_code, &mapping->at_param, K_NO_WAIT);
-	if (ret < 0) {
-		LOG_ERR("Failed to enqueue AT command: %d", ret);
+	if (evt->value == 1) {
+		// TODO: `at_cmd_enqueue_code()` will do a copy of the param struct, but unfortunately
+		// not a deep copy, so we need to soemhow handle this in the futre in case we make
+		// full/proper use of heap strings.
+		int ret = at_cmd_enqueue_code(mapping->at_code, &mapping->at_param, K_NO_WAIT);
+		if (ret < 0)
+			LOG_ERR("Failed to enqueue AT command: %d", ret);
+
+	} else if (evt->value == 0 && mapping->at_code_release != 0) {
+		int ret = at_cmd_enqueue_code(mapping->at_code_release, &mapping->at_param, K_NO_WAIT);
+		if (ret < 0)
+			LOG_ERR("Failed to enqueue release AT command: %d", ret);
 	}
 }
 INPUT_CALLBACK_DEFINE(btn_dev, on_input, NULL);

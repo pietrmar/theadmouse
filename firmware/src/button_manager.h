@@ -4,7 +4,7 @@
 
 int button_manager_init(void);
 
-int button_manager_set_mapping(size_t idx, const uint16_t at_code, const struct at_cmd_param *at_param);
+int button_manager_set_mapping(size_t idx, const uint16_t at_code, const uint16_t at_code_release, const struct at_cmd_param *at_param);
 int button_manager_get_mapping(size_t idx, uint16_t *at_code, struct at_cmd_param **at_param);
 int button_manager_delete_mapping(size_t idx);
 
