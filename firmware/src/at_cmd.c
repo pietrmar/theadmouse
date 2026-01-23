@@ -284,12 +284,9 @@ static int at_cmd_Ax(const struct at_cmd_param *arg, void *ctx)
 	uint32_t ui;
 	enum axis axis = (enum axis)(uintptr_t)ctx;
 
-	int ret = at_cmd_param_get_int(arg, &ui);
+	int ret = at_cmd_param_get_uint(arg, &ui);
 	if (ret < 0)
 		return ret;
-
-	// TODO: Technically there is nothing stopping us from using a negative sensitivity,
-	// the motion engin will just flip the axis in that case.
 
 	return motion_engine_set_acceleration(ui, axis);
 }
@@ -336,47 +333,47 @@ static int at_cmd_internal_load_slot_index(const struct at_cmd_param *arg, void 
 }
 
 static const struct at_cmd at_cmds[] = {
-	{ MAKE2CC(ID), AT_CMD_PARAM_TYPE_NONE, at_cmd_ID, NULL },
+	{ MAKE2CC(ID), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_ID, NULL },
 
-	{ MAKE2CC(MM), AT_CMD_PARAM_TYPE_UINT, at_cmd_MM, NULL },
-	{ MAKE2CC(WA), AT_CMD_PARAM_TYPE_UINT, at_cmd_WA, NULL },
-	{ MAKE2CC(NC), AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
+	{ MAKE2CC(MM), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_MM, NULL },
+	{ MAKE2CC(WA), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_WA, NULL },
+	{ MAKE2CC(NC), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_NC, NULL },
 
-	{ MAKE2CC(CL), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_LEFT, .double_click = false } },
-	{ MAKE2CC(CD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_LEFT, .double_click = true } },
-	{ MAKE2CC(CR), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_RIGHT, .double_click = false } },
-	{ MAKE2CC(CM), AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_MIDDLE, .double_click = false } },
+	{ MAKE2CC(CL), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_LEFT, .double_click = false } },
+	{ MAKE2CC(CD), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_LEFT, .double_click = true } },
+	{ MAKE2CC(CR), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_RIGHT, .double_click = false } },
+	{ MAKE2CC(CM), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_Cx, &(struct mouse_click_params){ .btn = HM_MOUSE_BTN_MIDDLE, .double_click = false } },
 
-	{ MAKE2CC(WU), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_UP },
-	{ MAKE2CC(WD), AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_DOWN },
+	{ MAKE2CC(WU), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_UP },
+	{ MAKE2CC(WD), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_Wx, (void *)MOUSE_WHEEL_DOWN },
 
-	{ MAKE2CC(MX), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_X },
-	{ MAKE2CC(MY), AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y },
+	{ MAKE2CC(MX), 0, AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_X },
+	{ MAKE2CC(MY), 0, AT_CMD_PARAM_TYPE_INT, at_cmd_Mx, (void *)AXIS_Y },
 
-	{ MAKE2CC(KW), AT_CMD_PARAM_TYPE_STR, at_cmd_KW, NULL },
-	{ MAKE2CC(KL), AT_CMD_PARAM_TYPE_STR, at_cmd_KL, NULL },
+	{ MAKE2CC(KW), 0, AT_CMD_PARAM_TYPE_STR, at_cmd_KW, NULL },
+	{ MAKE2CC(KL), AT_CMD_FLAG_OPT_PARAM, AT_CMD_PARAM_TYPE_STR, at_cmd_KL, NULL },
 
-	{ MAKE2CC(BM), AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
+	{ MAKE2CC(BM), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_BM, NULL },
 
-	{ MAKE2CC(SC), AT_CMD_PARAM_TYPE_UINT, at_cmd_SC, NULL },
-	{ MAKE2CC(SR), AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)true },
-	{ MAKE2CC(ER), AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)false },
+	{ MAKE2CC(SC), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_SC, NULL },
+	{ MAKE2CC(SR), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)true },
+	{ MAKE2CC(ER), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_xR, (void *)false },
 
-	{ MAKE2CC(AX), AT_CMD_PARAM_TYPE_INT, at_cmd_Ax, (void *)AXIS_X },
-	{ MAKE2CC(AY), AT_CMD_PARAM_TYPE_INT, at_cmd_Ax, (void *)AXIS_Y },
-	{ MAKE2CC(CA), AT_CMD_PARAM_TYPE_NONE, at_cmd_CA, NULL },
+	{ MAKE2CC(AX), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_Ax, (void *)AXIS_X },
+	{ MAKE2CC(AY), 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_Ax, (void *)AXIS_Y },
+	{ MAKE2CC(CA), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_CA, NULL },
 
-	{ MAKE2CC(SA), AT_CMD_PARAM_TYPE_STR, at_cmd_SA, NULL },
-	{ MAKE2CC(LO), AT_CMD_PARAM_TYPE_STR, at_cmd_LO, NULL },
-	{ MAKE2CC(LA), AT_CMD_PARAM_TYPE_NONE, at_cmd_LA, NULL },
-	{ MAKE2CC(LI), AT_CMD_PARAM_TYPE_NONE, at_cmd_LI, NULL },
-	{ MAKE2CC(NE), AT_CMD_PARAM_TYPE_NONE, at_cmd_NE, NULL },
+	{ MAKE2CC(SA), 0, AT_CMD_PARAM_TYPE_STR, at_cmd_SA, NULL },
+	{ MAKE2CC(LO), 0, AT_CMD_PARAM_TYPE_STR, at_cmd_LO, NULL },
+	{ MAKE2CC(LA), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_LA, NULL },
+	{ MAKE2CC(LI), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_LI, NULL },
+	{ MAKE2CC(NE), 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_NE, NULL },
 
 	// Echo command, not in the original FABI, but added here for debugging purposes
-	{ MAKE2CC(EC), AT_CMD_PARAM_TYPE_STR, at_cmd_EC, NULL },
+	{ MAKE2CC(EC), 0, AT_CMD_PARAM_TYPE_STR, at_cmd_EC, NULL },
 
-	{ AT_CMD_INTERNAL_EMPTY_COMMAND, AT_CMD_PARAM_TYPE_NONE, at_cmd_internal_empty_command, NULL },
-	{ AT_CMD_INTERNAL_LOAD_SLOT_INDEX, AT_CMD_PARAM_TYPE_UINT, at_cmd_internal_load_slot_index, NULL },
+	{ AT_CMD_INTERNAL_EMPTY_COMMAND, 0, AT_CMD_PARAM_TYPE_NONE, at_cmd_internal_empty_command, NULL },
+	{ AT_CMD_INTERNAL_LOAD_SLOT_INDEX, 0, AT_CMD_PARAM_TYPE_UINT, at_cmd_internal_load_slot_index, NULL },
 };
 
 static const struct at_cmd *find_at_cmd(const uint16_t code)
@@ -749,41 +746,38 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 		LOG_WRN("AT cmd <%s> does not take parameters, ignoring <%s>", command, param);
 	}
 
-	// Fail if a parameter is missing
-	// HACK: However if we expect a string parameter then an empty string is allowed
-	// TODO: Add some flag to distinguish in the AT command table if an empty string is allowed
-	if (cmd->param_type != AT_CMD_PARAM_TYPE_NONE && cmd->param_type != AT_CMD_PARAM_TYPE_STR && param == NULL) {
+	// Fail if a parameter is missing and is not optional
+	if (cmd->param_type != AT_CMD_PARAM_TYPE_NONE && param == NULL && !(cmd->flags & AT_CMD_FLAG_OPT_PARAM)) {
 		LOG_WRN("AT cmd <%s> requires a parameter", command);
 		return -EINVAL;
 	}
 
 	struct at_cmd_param cmd_param = { 0 };
 
-	// TODO: Consider not using automatic radix detection when using `strtol()`
-	// and `strtoul()` and instead maybe have a flag in the command table or so.
-	int ret = 0;
-	switch (cmd->param_type) {
-		case AT_CMD_PARAM_TYPE_NONE:
-			break;
-		case AT_CMD_PARAM_TYPE_INT:
-			ret = at_cmd_param_set_int(&cmd_param, strtol(param, NULL, 0));
-			break;
-		case AT_CMD_PARAM_TYPE_UINT:
-			ret = at_cmd_param_set_uint(&cmd_param, strtoul(param, NULL, 0));
-			break;
-		case AT_CMD_PARAM_TYPE_STR:
-			// `param` can be NULL when no string parameter was passed
-			if (param != NULL)
-				ret = at_cmd_param_set_str(&cmd_param, param);
-			break;
-		default:
-			LOG_WRN("Unhandled param type %d", cmd->param_type);
-			return -EINVAL;
-			break;
-	};
+	if (param != NULL) {
+		// TODO: Consider not using automatic radix detection when using `strtol()`
+		int ret = 0;
 
-	if (ret < 0) {
-		return ret;
+		switch (cmd->param_type) {
+			case AT_CMD_PARAM_TYPE_NONE:
+				break;
+			case AT_CMD_PARAM_TYPE_INT:
+				ret = at_cmd_param_set_int(&cmd_param, strtol(param, NULL, 0));
+				break;
+			case AT_CMD_PARAM_TYPE_UINT:
+				ret = at_cmd_param_set_uint(&cmd_param, strtoul(param, NULL, 0));
+				break;
+			case AT_CMD_PARAM_TYPE_STR:
+				ret = at_cmd_param_set_str(&cmd_param, param);
+				break;
+			default:
+				LOG_WRN("Unhandled param type %d", cmd->param_type);
+				return -EINVAL;
+				break;
+		};
+
+		if (ret < 0)
+			return ret;
 	}
 
 	*out_cmd = cmd;

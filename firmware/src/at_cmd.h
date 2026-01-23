@@ -52,8 +52,14 @@ static inline const char *at_code_to_str(uint16_t code, char buf[3])
 	return buf;
 }
 
+enum at_cmd_flags {
+	AT_CMD_FLAG_NONE	= 0,
+	AT_CMD_FLAG_OPT_PARAM	= (1 << 0),
+};
+
 struct at_cmd {
 	uint16_t code;
+	enum at_cmd_flags flags;
 	enum at_cmd_param_type param_type;
 	at_cmd_fn cb;
 	void *ctx;
