@@ -765,6 +765,10 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 				ret = at_cmd_param_set_int(&cmd_param, strtol(param, NULL, 0));
 				break;
 			case AT_CMD_PARAM_TYPE_UINT:
+				// Do not allow negative numbers
+				if (*param == '-')
+					return -EINVAL;
+
 				ret = at_cmd_param_set_uint(&cmd_param, strtoul(param, NULL, 0));
 				break;
 			case AT_CMD_PARAM_TYPE_STR:
