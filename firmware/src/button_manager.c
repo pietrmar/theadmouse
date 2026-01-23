@@ -33,6 +33,12 @@ static struct button_mapping btn_map[] = {
 	{ .code = INPUT_BTN_1, .valid = false },
 	{ .code = INPUT_BTN_2, .valid = false },
 	{ .code = INPUT_BTN_3, .valid = false },
+
+	// These keycodes are emitted by the motion_engine if we are running in the alternate mode
+	{ .code = INPUT_KEY_UP,		.valid = false },
+	{ .code = INPUT_KEY_DOWN,	.valid = false },
+	{ .code = INPUT_KEY_LEFT,	.valid = false },
+	{ .code = INPUT_KEY_RIGHT,	.valid = false },
 };
 
 const size_t button_manager_num_buttons = ARRAY_SIZE(btn_map);
