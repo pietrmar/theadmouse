@@ -788,6 +788,15 @@ int at_parse_line_inplace(char *s, const struct at_cmd **out_cmd, struct at_cmd_
 			case AT_CMD_PARAM_TYPE_STR:
 				ret = at_cmd_param_set_str(&cmd_param, param);
 				break;
+			case AT_CMD_PARAM_TYPE_KEYS:
+				uint8_t keys[AT_CMD_PARAM_MAX_KEYS] = { 0 };
+				ret = hm_input_icode_list_from_string(param, keys, ARRAY_SIZE(keys));
+				if (ret < 0)
+					return ret;
+
+				int len = ret;
+				ret = at_cmd_param_set_keys(&cmd_param, keys, len);
+				break;
 			default:
 				LOG_WRN("Unhandled param type %d", cmd->param_type);
 				return -EINVAL;
@@ -857,18 +866,59 @@ int at_format_cmd(char *out_buf, size_t buf_len, const uint16_t code, const stru
 				return ret;
 			ret = snprintf(out_buf, buf_len, "AT %s %s", at_code_to_str(code, atbuf), s);
 			break;
+		case AT_CMD_PARAM_TYPE_KEYS:
+			const uint8_t *keys;
+			ret = at_cmd_param_get_keys(param, &keys);
+			if (ret < 0)
+				break;
+
+			int keys_len = ret;
+
+			size_t offset = 0;
+			ret = snprintf(out_buf, buf_len, "AT %s", at_code_to_str(code, atbuf));
+			if (ret < 0 || (size_t)ret >= buf_len)
+				break;
+
+			offset = ret;
+			for (int i = 0; i < keys_len; i++) {
+				if (keys[i] == 0)
+					break;
+
+				size_t remaining = (offset < buf_len) ? (buf_len - offset) : 0;
+
+				if (remaining < 2) {
+					ret = -EMSGSIZE;
+					break;
+				}
+
+				out_buf[offset++] = ' ';
+				remaining--;
+				out_buf[offset] = '\0';
+
+				ret = hm_input_icode_to_keyname(out_buf + offset, remaining, keys[i]);
+				if (ret < 0)
+					break;
+
+				offset += ret;
+			}
+			break;
 		default:
 			LOG_WRN("Unhandled param type %d", param_type);
 			return -EINVAL;
 			break;
 	}
 
-	if (ret < 0 || ret >= buf_len) {
-		ret = ret < 0 ? ret : -EMSGSIZE;
-
-		LOG_ERR("Failed to format AT command: %d", ret);
+	if (ret < 0 && ret != -EMSGSIZE) {
+		LOG_ERR("Failed to format AT command <%s>: %d", at_code_to_str(code, atbuf), ret);
 		return ret;
 	}
+
+	if ((ret >= 0 && (size_t)ret >= buf_len) || ret == -EMSGSIZE) {
+		LOG_ERR("AT format buffer overflow, cmd: <%s> (partial: <%s>)", at_code_to_str(code, atbuf), out_buf);
+		return -EMSGSIZE;
+	}
+
+	LOG_DBG("Formatted AT command: <%s>", out_buf);
 
 	return 0;
 }
