@@ -307,7 +307,7 @@ static int cmd_at(const struct shell *shell, size_t argc, char **argv)
 	const struct at_cmd *cmd = NULL;
 	struct at_cmd_param cmd_param = { 0 };
 
-	int ret = at_parse_line_inplace(line, &cmd, &cmd_param, AT_FLAG_PARSER_ALLOW_NO_PREFIX);
+	int ret = at_parse_line_inplace(line, &cmd, &cmd_param, AT_PARSER_FLAG_ALLOW_NO_PREFIX);
 	if (ret < 0) {
 		shell_error(shell, "Failed to parse line: %d", ret);
 		return ret;
