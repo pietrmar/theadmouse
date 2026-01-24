@@ -1,3 +1,4 @@
+#include <zephyr/drivers/pwm.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/fs/fs.h>
 
@@ -506,6 +507,8 @@ static int __slot_manager_load_slot_by_index_nolock(int idx)
 	return ret;
 }
 
+const uint16_t tone_table[] = { 523, 587, 659, 698, 784, 880, 988, 1047 };
+
 K_SEM_DEFINE(slot_manager_load_lock, 1, 1);
 int slot_manager_load_slot_by_index(int idx)
 {
@@ -519,6 +522,9 @@ int slot_manager_load_slot_by_index(int idx)
 		LOG_ERR("Recursive slot loading detected!");
 		return -EBUSY;
 	}
+
+	int tone_idx = idx < ARRAY_SIZE(tone_table) ? idx : ARRAY_SIZE(tone_table) - 1;
+	slot_manager_play_note(tone_table[tone_idx], 150);
 
 	int ret = __slot_manager_load_slot_by_index_nolock(idx);
 
@@ -630,3 +636,46 @@ int slot_manager_init(void)
 
 	return 0;
 }
+
+struct note {
+	uint32_t freq;
+	uint32_t duration;
+};
+
+K_MSGQ_DEFINE(note_queue, sizeof(struct note), 8, 4);
+
+int slot_manager_play_note(uint32_t freq, uint32_t duration)
+{
+	struct note nt = {
+		.freq = freq,
+		.duration = duration,
+	};
+
+	return k_msgq_put(&note_queue, &nt, K_FOREVER);
+}
+
+static const struct pwm_dt_spec pwm_spk = PWM_DT_SPEC_GET(DT_CHOSEN(mpi_spk_pwm));
+
+static void tone_player_thread(void *p1, void *p2, void *p3)
+{
+	while (true) {
+		struct note cur_note = { 0 };
+		int ret = k_msgq_get(&note_queue, &cur_note, K_FOREVER);
+		if (ret < 0)
+			continue;
+
+		if (cur_note.freq == 0) {
+			pwm_set_dt(&pwm_spk, 0, 0);
+		} else {
+			uint32_t period_ns = 1000000000U / cur_note.freq;
+			pwm_set_dt(&pwm_spk, period_ns, period_ns / 2);
+		}
+
+		if (cur_note.duration != 0)
+			k_sleep(K_MSEC(cur_note.duration));
+
+		if (k_msgq_peek(&note_queue, &cur_note) == -ENOMSG)
+			pwm_set_dt(&pwm_spk, 0, 0);
+	}
+}
+K_THREAD_DEFINE(tone_player_tid, 512, tone_player_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(10), 0, 0);
