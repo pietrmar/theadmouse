@@ -1,0 +1,14 @@
+# Copyright (c) 2026 Martin Pietryka
+# SPDX-License-Identifier: Apache-2.0
+
+description: PWM-driven speaker.
+
+compatible: "pwm-spk"
+
+include: base.yaml
+
+properties:
+  pwms:
+    required: true
+    type: phandle-array
+    description: PWM specifier driving the speaker.
