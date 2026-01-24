@@ -273,46 +273,44 @@ static void ble_hid_thread(void *p1, void *p2, void *p3)
 		struct hm_hid_evt evt;
 		k_msgq_get(&hm_hid_msgq, &evt, K_FOREVER);
 
-		do {
-			switch (evt.type) {
-				case HM_HID_EVT_KEY: {
-					bool changed = apply_key(evt.key.hid_keycode, evt.key.pressed);
+		switch (evt.type) {
+			case HM_HID_EVT_KEY: {
+				bool changed = apply_key(evt.key.hid_keycode, evt.key.pressed);
 
-					if (changed)
-						send_kbd_report(kbd_state);
+				if (changed)
+					send_kbd_report(kbd_state);
 
-					break;
-				}
-				case HM_HID_EVT_MOUSE_MOVE: {
-					int8_t dx = evt.mouse_move.dx;
-					int8_t dy = evt.mouse_move.dy;
-
-					if (dx != 0 || dy != 0)
-						send_mouse_report(dx, dy, 0, mouse_btn_state);
-
-					break;
-				}
-				case HM_HID_EVT_MOUSE_WHEEL: {
-					int8_t w = evt.mouse_wheel.steps;
-
-					if (w != 0)
-						send_mouse_report(0, 0, w, mouse_btn_state);
-
-					break;
-				}
-				case HM_HID_EVT_MOUSE_BTN: {
-					bool changed = apply_mouse_btn(evt.mouse_btn.btn, evt.mouse_btn.pressed);
-
-					if (changed)
-						send_mouse_report(0, 0, 0, mouse_btn_state);
-
-					break;
-				}
-				default:
-					LOG_WRN("Unhandled HID queue message type: %d", evt.type);
-					break;
+				break;
 			}
-		} while (k_msgq_get(&hm_hid_msgq, &evt, K_NO_WAIT) == 0);
+			case HM_HID_EVT_MOUSE_MOVE: {
+				int8_t dx = evt.mouse_move.dx;
+				int8_t dy = evt.mouse_move.dy;
+
+				if (dx != 0 || dy != 0)
+					send_mouse_report(dx, dy, 0, mouse_btn_state);
+
+				break;
+			}
+			case HM_HID_EVT_MOUSE_WHEEL: {
+				int8_t w = evt.mouse_wheel.steps;
+
+				if (w != 0)
+					send_mouse_report(0, 0, w, mouse_btn_state);
+
+				break;
+			}
+			case HM_HID_EVT_MOUSE_BTN: {
+				bool changed = apply_mouse_btn(evt.mouse_btn.btn, evt.mouse_btn.pressed);
+
+				if (changed)
+					send_mouse_report(0, 0, 0, mouse_btn_state);
+
+				break;
+			}
+			default:
+				LOG_WRN("Unhandled HID queue message type: %d", evt.type);
+				break;
+		}
 	}
 }
 K_THREAD_DEFINE(ble_hid_tid, 2048, ble_hid_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(8), 0, 0);
