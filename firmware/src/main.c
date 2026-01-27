@@ -249,10 +249,12 @@ int main(void)
 		LOG_ERR("BLE initialization failed");
 	}
 
+#ifdef CONFIG_TELEMETRY
 	ret = telemetry_uart_init();
 	if (ret < 0) {
 		LOG_ERR("telemetry uart initialization failed");
 	}
+#endif
 
 	ret = button_manager_init();
 	if (ret < 0) {

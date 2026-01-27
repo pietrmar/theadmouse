@@ -8,6 +8,29 @@ config APP_PROJECT_NAME
 	help
 		Human-readable name of this firmware/application
 
+config TELEMETRY
+	bool "Enable telemetry"
+	default n
+	help
+		Enable the telemetry data stream using a separate USB CDC port.
+
+if TELEMETRY
+	config TELEMETRY_PLAINTEXT
+	bool "Enable plaintext telemetry"
+	default n
+	help
+		If enabled telemetry will be sent in plaintext which can be slow.
+
+	config TELEMETRY_DECIM_FACTOR
+		int "Telemetry decimation factor"
+		default 10
+		range 1 1000
+		help
+			Sets the downsampling ration for the telemetry stream.
+
+			Data will be sent out only every Nth IMU data trigger.
+endif # TELEMETRY
+
 menu "Logging Configuration"
 
 module = THEADMOUSE

@@ -14,7 +14,6 @@ target_sources(app PRIVATE
 		src/headmouse_input.c
 		src/motion_engine.c
 		src/slot_manager.c
-		src/telemetry_uart.c
 
 		src/MadgwickAHRS/MadgwickAHRS.c
 
@@ -29,6 +28,10 @@ target_sources(app PRIVATE
 		src/keymaps/KeyboardLayout_pt_PT.c
 		src/keymaps/KeyboardLayout_sv_SE.c
 )
+
+if(CONFIG_TELEMETRY)
+	target_sources(app PRIVATE src/telemetry_uart.c)
+endif()
 
 if(CONFIG_LSM6DSL_CUSTOM)
 	target_sources(app PRIVATE

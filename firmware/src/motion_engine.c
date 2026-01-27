@@ -64,14 +64,11 @@ static float imu_accum_x = 0.0f;
 static float imu_accum_y = 0.0f;
 static struct k_spinlock imu_accum_lock;
 
-// The plaintext telemetry takes up to 1.9 ms to format and send out
-// TODO: Make this a Kconfig option
-#define TELEMETRY_PLAINTEXT	0
-#define TELEMETRY_DECIM_FACTOR	10
+#ifdef CONFIG_TELEMETRY
 
 static inline int feed_telemetry(uint32_t sample_id, const struct zsl_vec *a, const struct zsl_vec *g, const struct zsl_vec *m, const struct zsl_quat *q, float t)
 {
-#if !TELEMETRY_PLAINTEXT
+#if !IS_ENABLED(CONFIG_TELEMETRY_PLAINTEXT)
 #define TELEMETRY_PAYLOAD_LEN	60	// 1*4 (uint32_t) + 14*4 (float)
 
 	//  1 * 4 bytes (uint32_t), sample_id
@@ -146,8 +143,9 @@ static inline int feed_telemetry(uint32_t sample_id, const struct zsl_vec *a, co
 			(double)m->data[0], (double)m->data[1], (double)m->data[2],
 			(double)q->r, (double)q->i, (double)q->j, (double)q->k,
 			(double)t);
-#endif // !TELEMETRY_PLAINTEXT
+#endif // !IS_ENABLED(CONFIG_TELEMETRY_PLAINTEXT)
 }
+#endif
 
 
 // Posible values from the data-sheet in g:
@@ -177,12 +175,14 @@ static void imu_thread(void *, void *, void *)
 	sampleFreq = IMU_SAMPLING_FREQUENCY;
 
 
+#ifdef CONFIG_TELEMETRY
 	// For the telemetry stream we need to keep a copy of the last mag value read
-	// from our loop as the MAG_DECIM_FACTOR and TELEMETRY_DECIM_FACTOR are not the
+	// from our loop as the MAG_DECIM_FACTOR and CONFIG_TELEMETRY_DECIM_FACTOR are not the
 	// same and "unlocked";
 	bool telemetry_mag_valid = false;
 	ZSL_VECTOR_DEF(telemetry_mag, 3);
 	zsl_vec_init(&telemetry_mag);
+#endif
 
 	ZSL_VECTOR_DEF(gyro_bias, 3);
 	zsl_vec_init(&gyro_bias);
@@ -253,10 +253,12 @@ static void imu_thread(void *, void *, void *)
 			raw_mag_vec[2] = sensor_value_to_float(&mag_val[2]);
 			mag_fetched = true;
 
+#ifdef CONFIG_TELEMETRY
 			telemetry_mag_vec[0] = raw_mag_vec[0];
 			telemetry_mag_vec[1] = raw_mag_vec[1];
 			telemetry_mag_vec[2] = raw_mag_vec[2];
 			telemetry_mag_valid = true;
+#endif
 		}
 
 		// TODO: Handle clipping somehow
@@ -341,7 +343,8 @@ static void imu_thread(void *, void *, void *)
 		imu_accum_y += raw_dy;
 		k_spin_unlock(&imu_accum_lock, key);
 
-		if ((sample_idx % TELEMETRY_DECIM_FACTOR) == 0) {
+#ifdef CONFIG_TELEMETRY
+		if ((sample_idx % CONFIG_TELEMETRY_DECIM_FACTOR) == 0) {
 			struct sensor_value temp;
 			sensor_channel_get(dev_imu, SENSOR_CHAN_DIE_TEMP, &temp);
 			float t = sensor_value_to_float(&temp);
@@ -356,6 +359,7 @@ static void imu_thread(void *, void *, void *)
 
 			feed_telemetry(sample_idx, &raw_acc, &raw_gyr, &telemetry_mag, &q_curr, t);
 		}
+#endif
 
 		int64_t t_end = k_uptime_ticks();
 
