@@ -198,6 +198,8 @@ static int at_cmd_Cx(const struct at_cmd_param *arg, void *ctx)
 	if (ret < 0)
 		return ret;
 
+	// TODO: Should a sleep be here, or a yield maybe?
+
 	ret = hm_input_report_mouse_btn(params->btn, false, K_FOREVER);
 	if (ret < 0)
 		return ret;
@@ -211,6 +213,8 @@ static int at_cmd_Cx(const struct at_cmd_param *arg, void *ctx)
 		ret = hm_input_report_mouse_btn(params->btn, true, K_FOREVER);
 		if (ret < 0)
 			return ret;
+
+		// TODO: Should a sleep be here, or a yield maybe?
 
 		ret = hm_input_report_mouse_btn(params->btn, false, K_FOREVER);
 		if (ret < 0)
@@ -605,6 +609,7 @@ static void at_cmd_thread(void *p1, void *p2, void *p3)
 			at_cmd_thread_poll_events[0].state = K_POLL_STATE_NOT_READY;
 		}
 
+		// Coming from `generate_report_signal`
 		if (at_cmd_thread_poll_events[1].state == K_POLL_STATE_SIGNALED) {
 			int signaled, result;
 			k_poll_signal_check(at_cmd_thread_poll_events[1].signal, &signaled, &result);
