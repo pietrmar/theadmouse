@@ -17,6 +17,7 @@
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log.h>
 
+#include "app_power_manager.h"
 #include "at_cmd.h"
 #include "ble_hid_service.h"
 #include "button_manager.h"
@@ -271,6 +272,11 @@ int main(void)
 		LOG_ERR("motion engine initialization failed");
 	}
 
+	ret = app_pm_init();
+	if (ret < 0) {
+		LOG_ERR("App power-manager initialization failed");
+	}
+
 	while (true) {
 		k_msleep(1000);
 	}
@@ -332,6 +338,19 @@ static int reboot_handler(const struct shell *shell, size_t argc, char **argv)
 	sys_reboot(SYS_REBOOT_COLD);
 }
 SHELL_CMD_REGISTER(reboot, NULL, "Perform a reboot", reboot_handler);
+
+static int cmd_app_pm_ra_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	app_pm_report_activity();
+	return 0;
+}
+
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	app_pm_cmds,
+	SHELL_CMD(ra, NULL, "Report activity", cmd_app_pm_ra_handler),
+	SHELL_SUBCMD_SET_END
+);
+SHELL_CMD_REGISTER(app_pm, &app_pm_cmds, "Application power-management commands", NULL);
 
 static int dfureboot_handler(const struct shell *shell, size_t argc, char **argv)
 {

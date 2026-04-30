@@ -69,6 +69,10 @@ module = TELEMETRY_UART
 module-str = telemetry_uart
 source "subsys/logging/Kconfig.template.log_config"
 
+module = APP_POWER_MANAGER
+module-str = app_power_manager
+source "subsys/logging/Kconfig.template.log_config"
+
 endmenu
 
 rsource "drivers/sensor/st/lsm6dsl/Kconfig"
