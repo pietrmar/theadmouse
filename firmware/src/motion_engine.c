@@ -3,6 +3,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/input/input.h>
+#include <zephyr/pm/device.h>
 
 #include <zsl/orientation/orientation.h>
 
@@ -673,5 +674,43 @@ int motion_engine_init(void)
 	k_timer_start(&imu_monitor_timer, K_SECONDS(1), K_SECONDS(1));
 
 	LOG_INF("Motion engine init done");
+	return 0;
+}
+
+int motion_engine_suspend(void)
+{
+	LOG_INF("Suspending");
+
+	k_timer_stop(&imu_monitor_timer);
+
+	int ret = pm_device_action_run(dev_imu, PM_DEVICE_ACTION_SUSPEND);
+	if (ret < 0) {
+		LOG_ERR("Failed to suspend the IMU: %d", ret);
+	}
+
+	ret = pm_device_action_run(dev_mag, PM_DEVICE_ACTION_SUSPEND);
+	if (ret < 0) {
+		LOG_ERR("Failed to suspend the magnetometer: %d", ret);
+	}
+
+	return 0;
+}
+
+int motion_engine_resume(void)
+{
+	LOG_INF("Resuming");
+
+	int ret = pm_device_action_run(dev_mag, PM_DEVICE_ACTION_RESUME);
+	if (ret < 0) {
+		LOG_ERR("Failed to resume the magnetometer: %d", ret);
+	}
+
+	ret = pm_device_action_run(dev_imu, PM_DEVICE_ACTION_RESUME);
+	if (ret < 0) {
+		LOG_ERR("Failed to resume the IMU: %d", ret);
+	}
+
+	k_timer_start(&imu_monitor_timer, K_SECONDS(1), K_SECONDS(1));
+
 	return 0;
 }

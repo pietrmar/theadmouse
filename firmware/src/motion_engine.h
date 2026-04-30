@@ -18,6 +18,8 @@ static inline bool mouse_mode_valid(enum mouse_mode mode)
 }
 
 int motion_engine_init(void);
+int motion_engine_suspend(void);
+int motion_engine_resume(void);
 
 enum mouse_mode motion_engine_get_mouse_mode(void);
 int motion_engine_set_mouse_mode(enum mouse_mode m);
