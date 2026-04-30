@@ -22,4 +22,5 @@ arm-none-eabi-gdb "$elf_path" \
 	-ex "monitor swdp_scan" \
 	-ex "attach 1" \
 	-ex "load" \
+	-ex "detach" \
 	-ex "quit"
