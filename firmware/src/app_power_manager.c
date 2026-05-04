@@ -20,9 +20,6 @@ static bool app_pm_target_idle = false;
 // `app_pm_actual_idle` accordingly.
 static bool app_pm_actual_idle = false;
 
-extern int ble_init(void);
-extern int ble_stop(void);
-
 // TODO: Currently the consumers are hardcoded here on suspend/resume, we probably should
 // implement something more nicer where consumers can register suspend/resume callbacks.
 static void app_pm_suspend_app_componenets(void)
