@@ -9,6 +9,7 @@ target_sources(app PRIVATE
 		src/app_power_manager.c
 		src/at_cmd.c
 		src/at_cmd_param.c
+		src/ble.c
 		src/ble_hid_service.c
 		src/button_manager.c
 		src/cmd_uart.c
