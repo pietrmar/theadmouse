@@ -120,6 +120,18 @@ static struct bt_hids_init_param hids_init_obj = {
 
 int ble_hid_service_init(void)
 {
+	// Currently we do not support de-initialization of the HID service, so
+	// multiple init calls are ignoremd.
+	// NOTE: This is not thread safe, but for our case it does not matter for now
+	// as this function will only be called once during boot and then later only
+	// when resuming the BLE module from a suspend.
+	static bool init_done = false;
+	if (init_done) {
+		LOG_INF("BLE HID service was already initialized.");
+		return 0;
+	}
+	init_done = true;
+
 	LOG_INF("Starting BLE HID service");
 
 	int ret = bt_hids_init(&hids_obj, &hids_init_obj);
