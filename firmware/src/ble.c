@@ -70,6 +70,7 @@ static struct bt_gatt_exchange_params mtu_exchange_params = {
 	.func = mtu_exchange_cb,
 };
 
+// TODO: Check if we need to flush any HID queues or so when a device (re-)connected.
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
