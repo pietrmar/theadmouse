@@ -163,3 +163,22 @@ int ble_init(void)
 
 	return 0;
 }
+
+int ble_suspend(void)
+{
+	LOG_INF("Suspending");
+
+	int ret = bt_disable();
+	if (ret < 0) {
+		LOG_ERR("Failed to disable BT: %d", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+int ble_resume(void)
+{
+	LOG_INF("Resuming");
+	return ble_init();
+}
