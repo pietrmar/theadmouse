@@ -74,6 +74,8 @@ static K_WORK_DEFINE(app_pm_idle_state_sync_work, app_pm_idle_state_sync_work_ha
 
 static void app_pm_idle_work_handler(struct k_work *work)
 {
+	LOG_DBG("Enter");
+
 	k_spinlock_key_t key = k_spin_lock(&app_pm_spinlock);
 
 	if (app_pm_lock_mask == 0 && !app_pm_target_idle) {
