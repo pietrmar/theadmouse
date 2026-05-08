@@ -85,6 +85,10 @@ static void app_pm_idle_work_handler(struct k_work *work)
 }
 static K_WORK_DELAYABLE_DEFINE(app_pm_idle_work, app_pm_idle_work_handler);
 
+void app_pm_debug_execute_idle_work_handler(void)
+{
+	app_pm_idle_work_handler(NULL);
+}
 
 void app_pm_lock_acquire(enum app_pm_lock_reason reason)
 {
