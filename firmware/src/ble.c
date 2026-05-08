@@ -29,7 +29,7 @@ static struct bt_data le_scan_rsp[] = {
 
 // TODO: We should prevent multiple client connections at the same time, or be able to manage multiple
 // simultaneous clients.
-int ble_start_adv(void)
+static int ble_start_adv(void)
 {
 	le_scan_rsp[0].data = bt_get_name();
 	le_scan_rsp[0].data_len = strlen(bt_get_name());
