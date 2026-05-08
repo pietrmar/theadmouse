@@ -4,6 +4,7 @@
 #include <zephyr/input/input.h>
 #include <zephyr/logging/log.h>
 
+#include "app_power_manager.h"
 #include "at_cmd.h"
 #include "button_manager.h"
 
@@ -157,6 +158,11 @@ static void on_input(struct input_event *evt, void *user_data)
 		LOG_WRN("No mapping entry for key code %u (%#x)", evt->code, evt->code);
 		return;
 	}
+
+	// TODO: Maybe this is not the place where we want to report user activity, maybe we want to
+	// rather report activity in the AT dispatch loop or so, but in any case, for now this is good
+	// enough.
+	app_pm_report_activity();
 
 	if (evt->value == 1)
 		atomic_set_bit(&button_state, idx);
