@@ -3,6 +3,7 @@
 
 #include "app_power_manager.h"
 
+#include "ble.h"
 #include "motion_engine.h"
 
 LOG_MODULE_REGISTER(app_power_manager, CONFIG_APP_POWER_MANAGER_LOG_LEVEL);
@@ -29,6 +30,11 @@ static void app_pm_suspend_app_componenets(void)
 	if (ret < 0) {
 		LOG_ERR("Failed to suspend motion engine: %d", ret);
 	}
+
+	ret = ble_suspend();
+	if (ret < 0) {
+		LOG_ERR("Failed to suspend BLE: %d", ret);
+	}
 }
 
 static void app_pm_resume_app_componenets(void)
@@ -37,6 +43,11 @@ static void app_pm_resume_app_componenets(void)
 	int ret = motion_engine_resume();
 	if (ret < 0) {
 		LOG_ERR("Failed to resume motion engine: %d", ret);
+	}
+
+	ret = ble_resume();
+	if (ret < 0) {
+		LOG_ERR("Failed to resume BLE: %d", ret);
 	}
 }
 
