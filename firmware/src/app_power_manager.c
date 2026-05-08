@@ -61,7 +61,7 @@ static void app_pm_idle_state_sync_work_handler(struct k_work *work)
 			app_pm_resume_app_componenets();
 		}
 
-		// Updat the actual idle state after the componenets have been suspended/resumed
+		// Update the actual idle state after the componenets have been suspended/resumed
 		key = k_spin_lock(&app_pm_spinlock);
 		app_pm_actual_idle = target_idle;
 		k_spin_unlock(&app_pm_spinlock, key);
