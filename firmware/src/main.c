@@ -187,9 +187,16 @@ static int cmd_app_pm_ra_handler(const struct shell *shell, size_t argc, char **
 	return 0;
 }
 
+static int cmd_app_pm_idle_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	app_pm_debug_execute_idle_work_handler();
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	app_pm_cmds,
 	SHELL_CMD(ra, NULL, "Report activity", cmd_app_pm_ra_handler),
+	SHELL_CMD(idle, NULL, "Execute idle work handler (simulate idle timeout)", cmd_app_pm_idle_handler),
 	SHELL_SUBCMD_SET_END
 );
 SHELL_CMD_REGISTER(app_pm, &app_pm_cmds, "Application power-management commands", NULL);
