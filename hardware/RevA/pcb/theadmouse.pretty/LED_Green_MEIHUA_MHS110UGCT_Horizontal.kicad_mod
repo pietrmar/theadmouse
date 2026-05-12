@@ -1,13 +1,13 @@
 (footprint "LED_Green_MEIHUA_MHS110UGCT_Horizontal"
-	(version 20241229)
+	(version 20260206)
 	(generator "pcbnew")
-	(generator_version "9.0")
+	(generator_version "10.0")
 	(layer "F.Cu")
 	(property "Reference" "REF**"
 		(at 0 -2.1 0)
 		(unlocked yes)
 		(layer "F.SilkS")
-		(uuid "c715299e-753f-4d73-9af8-e16dcf287239")
+		(uuid "2b02b304-1320-458e-aaf0-29182d28f50f")
 		(effects
 			(font
 				(size 1 1)
@@ -19,7 +19,7 @@
 		(at 0 1.6 0)
 		(unlocked yes)
 		(layer "F.Fab")
-		(uuid "19b28b21-1c22-47d1-bfcb-5588c2fa008a")
+		(uuid "44ed48d3-ceb1-43ed-8663-b22fa2c78900")
 		(effects
 			(font
 				(size 1 1)
@@ -32,7 +32,7 @@
 		(unlocked yes)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "c0a66150-ec42-4a93-9cbd-540f890ebf9c")
+		(uuid "aaa22700-415d-429c-8598-f20ae92dadd6")
 		(effects
 			(font
 				(size 1 1)
@@ -45,7 +45,7 @@
 		(unlocked yes)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "5e7e335c-b685-4ab0-aae7-e823f67c47f8")
+		(uuid "1b919943-5ebd-4eda-8daf-bb26dc1f6b71")
 		(effects
 			(font
 				(size 1 1)
@@ -53,6 +53,7 @@
 			)
 		)
 	)
+	(duplicate_pad_numbers_are_jumpers no)
 	(fp_line
 		(start -1.6 -0.45)
 		(end -1.011187 -0.45)
@@ -61,7 +62,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "23bea350-846b-47ce-9fa9-fc9f577b144e")
+		(uuid "d2521310-1076-439e-bc52-58aa5be2802f")
 	)
 	(fp_line
 		(start 1.011187 -0.45)
@@ -71,7 +72,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "043078a9-c728-41ca-8f67-c3b2e0c5b4ec")
+		(uuid "68f99720-71f3-4791-beb6-d15e007e1bb6")
 	)
 	(fp_line
 		(start 1.85 0.05)
@@ -81,7 +82,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "acfcb5e7-6959-4899-8e45-aa13624668fe")
+		(uuid "fd548a4c-e620-40d3-98d6-292e50b0e342")
 	)
 	(fp_line
 		(start 1.85 0.45)
@@ -91,7 +92,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "a3411426-0f7a-4dae-9158-c9ab1c3dd79f")
+		(uuid "18cebc96-bb58-43bb-8675-0ef254385045")
 	)
 	(fp_arc
 		(start -1.011187 -0.45)
@@ -102,7 +103,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "29043ddc-e71b-4819-bbec-a5ed6c22fb1a")
+		(uuid "338e0667-0301-40c9-82a1-b48c09094586")
 	)
 	(fp_line
 		(start -2 -0.6)
@@ -112,7 +113,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "bae5f559-92c9-4586-9855-f19401fad008")
+		(uuid "846d076a-1639-476a-b1a8-481f32dd542c")
 	)
 	(fp_line
 		(start -2 0.6)
@@ -122,7 +123,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "9e966b68-f95a-4e83-af80-2cb0405f1311")
+		(uuid "8015118e-e25f-41eb-81bf-f2a5b393c8cf")
 	)
 	(fp_line
 		(start -0.9 0.6)
@@ -132,7 +133,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "a27e6149-5a16-4bcf-bacb-77477c2b3199")
+		(uuid "245f6217-d523-4d37-9cac-379052cb8d92")
 	)
 	(fp_line
 		(start -0.9 0.85)
@@ -142,7 +143,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "0ce5232b-3b79-4aef-b782-add1ae9647f4")
+		(uuid "c6e97e05-aa21-4f14-8e62-e2f831dd3dac")
 	)
 	(fp_line
 		(start -0.9 0.85)
@@ -152,7 +153,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "52687b72-4cf6-4095-997c-88d7ba038074")
+		(uuid "a0df9d5d-e36c-4e46-a264-2b6e538bda40")
 	)
 	(fp_line
 		(start 0.9 0.6)
@@ -162,7 +163,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "8297f931-10ac-49a1-817c-954fea31f450")
+		(uuid "06a2822f-7ac9-456c-bb61-4ab752cf232d")
 	)
 	(fp_line
 		(start 0.9 0.85)
@@ -172,7 +173,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "25a5a00d-04a3-4ed9-8cf4-2b42b504554a")
+		(uuid "a428b9df-5e27-4783-a7d7-658f540efef5")
 	)
 	(fp_line
 		(start 2 -0.6)
@@ -182,7 +183,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "c3d1f206-9900-4803-a80c-eb1d87a62400")
+		(uuid "fcb69815-8111-4903-9a66-1bebbfb30d60")
 	)
 	(fp_line
 		(start 2 0.6)
@@ -192,7 +193,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "47ff5350-46e9-4b1c-9eac-3bf106290ec8")
+		(uuid "60027a6a-b9a4-4417-bab2-cb7d19953f62")
 	)
 	(fp_arc
 		(start -1.166608 -0.6)
@@ -203,7 +204,7 @@
 			(type default)
 		)
 		(layer "F.CrtYd")
-		(uuid "1564f4c1-ad47-492f-b4e7-828d180463e1")
+		(uuid "3ba90e5c-4b59-41e1-9cdf-726f34d3ee95")
 	)
 	(fp_line
 		(start -1.6 -0.45)
@@ -213,7 +214,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "ac0fc0af-d215-44e2-99f4-7d05c4787889")
+		(uuid "0d1fd91d-2604-4c4b-bd63-e4ced2fe7a0f")
 	)
 	(fp_line
 		(start 1.45 0.45)
@@ -223,7 +224,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "7a615644-d006-4292-bf6d-9adbf2283274")
+		(uuid "57ba6138-88cf-4ab8-be49-7211b9b942dc")
 	)
 	(fp_line
 		(start 1.6 -0.45)
@@ -233,7 +234,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "83e0fcbb-bff5-4748-b03a-af904be5c877")
+		(uuid "770c7aa0-14c1-4c79-b0fd-1bcf3e2e008e")
 	)
 	(fp_line
 		(start 1.85 0.45)
@@ -243,7 +244,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "346e5c36-9df6-4cf8-ae5f-41fb6076dcdb")
+		(uuid "75b023d0-dfc1-4e4a-8b1b-81e4d45705dc")
 	)
 	(fp_arc
 		(start -0.999999 -0.45)
@@ -254,13 +255,13 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "519571a1-cc72-4251-99a5-050c527b4285")
+		(uuid "b7971b6b-96b9-4d78-912c-a79e849d1f79")
 	)
 	(fp_text user "${REFERENCE}"
 		(at 0 -2.1 0)
 		(unlocked yes)
 		(layer "F.Fab")
-		(uuid "690a318b-0cb7-46cd-a6f2-a85b569eb47d")
+		(uuid "ba506c24-47fb-45f7-89b5-7c3d584e0e2d")
 		(effects
 			(font
 				(size 1 1)
@@ -274,7 +275,7 @@
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.15)
 		(thermal_bridge_angle 45)
-		(uuid "0b453838-ea68-476f-b739-99f7b7846e45")
+		(uuid "a9b6e6f7-2b10-40c6-bd12-94ff4854a191")
 	)
 	(pad "1" smd roundrect
 		(at -1.4 0)
@@ -282,7 +283,7 @@
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.15)
 		(thermal_bridge_angle 45)
-		(uuid "3bc44a3d-3e83-4f17-a230-b04134f6d26f")
+		(uuid "6384142a-7ba6-4909-8a8c-f0a10514389a")
 	)
 	(pad "2" smd roundrect
 		(at 1.4 0)
@@ -290,7 +291,7 @@
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(roundrect_rratio 0.15)
 		(thermal_bridge_angle 45)
-		(uuid "90f94f12-f26e-4af7-8122-0469042f4e12")
+		(uuid "fa24d151-2f4b-4ae9-85c5-8c0fdeeea536")
 	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/3dmodels/LED_RGB_TUOZHAN_P4-1204RGBWS2-1.5T-A_Horizontal.wrl"
