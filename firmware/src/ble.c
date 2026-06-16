@@ -164,6 +164,9 @@ int ble_init(void)
 	return 0;
 }
 
+// TODO: After the device was in suspend for a while it seems that my notebook does
+// not automatically reconnect to it.
+// TODO: Consider instead lowering the connection interval and such to a minimum.
 int ble_suspend(void)
 {
 	LOG_INF("Suspending");
