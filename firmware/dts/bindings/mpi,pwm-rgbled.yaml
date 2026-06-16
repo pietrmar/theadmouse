@@ -1,0 +1,14 @@
+# Copyright (c) 2026 Martin Pietryka
+# SPDX-License-Identifier: Apache-2.0
+
+description: PWM-driven an RGB LED.
+
+compatible: "mpi,pwm-rgbled"
+
+include: base.yaml
+
+properties:
+  pwms:
+    required: true
+    type: phandle-array
+    description: Exactly 3 PWM specifiers driving the RGB LED.
