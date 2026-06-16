@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include  <stdlib.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 
@@ -173,6 +175,52 @@ static int dfureboot_handler(const struct shell *shell, size_t argc, char **argv
 	return 0;
 }
 SHELL_CMD_REGISTER(dfureboot, NULL, "Reboot into DFU mode (UF2 and CDC)", dfureboot_handler);
+
+static int cmd_slot_manager_play_tone_hanlder(const struct shell *shell, size_t argc, char **argv)
+{
+	if (argc < 2 || argc > 3) {
+		shell_help(shell);
+		return SHELL_CMD_HELP_PRINTED;
+	}
+
+	int freq = CLAMP(atoi(argv[1]), 0, 24000);
+	int duration_ms = 1000;
+	if (argc == 3)
+		duration_ms = CLAMP(atoi(argv[2]), 0, 10000);
+
+	shell_print(shell, "Enqueueing tone playback with %d Hz for %d ms", freq, duration_ms);
+	return slot_manager_play_tone(freq, duration_ms);
+}
+
+static int cmd_slot_manager_set_rgb_led_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	if (argc != 4) {
+		shell_help(shell);
+		return SHELL_CMD_HELP_PRINTED;
+	}
+
+	int r = CLAMP(atoi(argv[1]), 0, 255);
+	int g = CLAMP(atoi(argv[2]), 0, 255);
+	int b = CLAMP(atoi(argv[3]), 0, 255);
+
+	shell_print(shell, "Setting RGB LED color: %d, %d, %d", r, g, b);
+
+	return slot_manager_set_rgb_led_color(r, g, b);
+}
+
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	slot_manager_cmds,
+	SHELL_CMD_ARG(play_tone, NULL,
+			"Play tone on the PWM speaker\n"
+			"Usage: play_tone <frequency> [duration]",
+			cmd_slot_manager_play_tone_hanlder, 2, 1),
+	SHELL_CMD_ARG(set_rgb_led, NULL,
+			"Set RGB LED color\n"
+			"Usage: set_rgb_led <red> <green> <blue>",
+			cmd_slot_manager_set_rgb_led_handler, 4, 0),
+	SHELL_SUBCMD_SET_END
+);
+SHELL_CMD_REGISTER(slot_manager, &slot_manager_cmds, "Slot manager commands", NULL);
 
 #if 0
 // TODO: We should not erase the whole flash now as we have LittleFS running on
