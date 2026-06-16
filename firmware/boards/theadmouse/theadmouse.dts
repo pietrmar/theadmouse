@@ -14,9 +14,6 @@
 	compatible = "mpi,theadmouse";
 
 	aliases {
-		red-pwm-led = &red_pwm_led;
-		green-pwm-led = &green_pwm_led;
-		blue-pwm-led = &blue_pwm_led;
 	};
 
 	chosen {
@@ -31,6 +28,7 @@
 		mpi,mag = &lis2mdl;
 
 		mpi,spk-pwm = &pwm_spk;
+		mpi,rgb-led-pwm = &pwm_rgb_led;
 	};
 
 	buttons: buttons {
@@ -58,20 +56,12 @@
 		};
 	};
 
-	pwmleds {
-		compatible = "pwm-leds";
+	pwm_rgb_led: pwmrgbled {
+		compatible = "mpi,pwm-rgbled";
 
-		red_pwm_led: pwm_led_0 {
-			pwms = <&pwm0 0 PWM_MSEC(20) PWM_POLARITY_INVERTED>;
-		};
-
-		green_pwm_led: pwm_led_1 {
-			pwms = <&pwm0 1 PWM_MSEC(20) PWM_POLARITY_INVERTED>;
-		};
-
-		blue_pwm_led: pwm_led_2 {
-			pwms = <&pwm0 2 PWM_MSEC(20) PWM_POLARITY_INVERTED>;
-		};
+		pwms = <&pwm0 0 PWM_MSEC(20) PWM_POLARITY_INVERTED>,	// Red
+			<&pwm0 1 PWM_MSEC(20) PWM_POLARITY_INVERTED>,	// Green
+			<&pwm0 2 PWM_MSEC(20) PWM_POLARITY_INVERTED>;	// Blue
 	};
 
 	pwm_spk: pwmspk {
