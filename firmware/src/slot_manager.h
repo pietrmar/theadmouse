@@ -31,4 +31,4 @@ int slot_manager_load_slot_by_name(const char *name);
 
 int slot_manager_load_next_slot(void);
 
-int slot_manager_play_note(uint32_t freq, uint32_t duration);
+int slot_manager_play_tone(uint32_t freq, uint32_t duration);

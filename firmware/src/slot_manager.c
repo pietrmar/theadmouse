@@ -524,7 +524,7 @@ int slot_manager_load_slot_by_index(int idx)
 	}
 
 	int tone_idx = idx < ARRAY_SIZE(tone_table) ? idx : ARRAY_SIZE(tone_table) - 1;
-	slot_manager_play_note(tone_table[tone_idx], 150);
+	slot_manager_play_tone(tone_table[tone_idx], 150);
 
 	int ret = __slot_manager_load_slot_by_index_nolock(idx);
 
@@ -644,7 +644,7 @@ struct note {
 
 K_MSGQ_DEFINE(note_queue, sizeof(struct note), 8, 4);
 
-int slot_manager_play_note(uint32_t freq, uint32_t duration)
+int slot_manager_play_tone(uint32_t freq, uint32_t duration)
 {
 	struct note nt = {
 		.freq = freq,
@@ -667,7 +667,7 @@ static void tone_player_thread(void *p1, void *p2, void *p3)
 		if (cur_note.freq == 0) {
 			pwm_set_dt(&pwm_spk, 0, 0);
 		} else {
-			uint32_t period_ns = 1000000000U / cur_note.freq;
+			uint32_t period_ns = PWM_HZ(cur_note.freq);
 			pwm_set_dt(&pwm_spk, period_ns, period_ns / 2);
 		}
 
