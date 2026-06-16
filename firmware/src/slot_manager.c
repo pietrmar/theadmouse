@@ -423,8 +423,36 @@ int slot_manager_save_current_slot_by_name(const char *name)
 }
 
 
-// HACK: This is just for quick testing
-extern int led_set_rgb(int r, int g, int b);
+#define PWM_RGB_NODE DT_CHOSEN(mpi_rgb_led_pwm)
+static const struct pwm_dt_spec pwm_rgb_led[] = {
+	PWM_DT_SPEC_GET_BY_IDX(PWM_RGB_NODE, 0),
+	PWM_DT_SPEC_GET_BY_IDX(PWM_RGB_NODE, 1),
+	PWM_DT_SPEC_GET_BY_IDX(PWM_RGB_NODE, 2),
+};
+
+int slot_manager_set_rgb_led_color(int r, int g, int b)
+{
+	int ret = 0;
+
+	int rgb_vals[] = { r, g, b };
+	for (int i = 0; i < ARRAY_SIZE(rgb_vals); i++) {
+
+		int val = CLAMP(rgb_vals[i], 0, 255);
+
+		if (val == 0) {
+			ret = pwm_set_dt(&pwm_rgb_led[i], 0, 0);
+		} else {
+			const uint32_t period_ns = PWM_KHZ(1);
+			ret = pwm_set_dt(&pwm_rgb_led[i], period_ns, (period_ns * val) / 255);
+		}
+
+		if (ret < 0)
+			LOG_ERR("Failed to set RGB PWM channel %d: %d\n", i, ret);
+	}
+
+	// Always succeed, any errors will be printed above
+	return 0;
+}
 
 static int __slot_manager_load_slot_by_index_nolock(int idx)
 {
@@ -494,15 +522,7 @@ static int __slot_manager_load_slot_by_index_nolock(int idx)
 	int r = (active_slot.color >> 16) & 0xFF;
 	int g = (active_slot.color >>  8) & 0xFF;
 	int b = (active_slot.color >>  0) & 0xFF;
-
-	// Scale from 0-255 to a percentage value of 0-100 as this
-	// is what the `led_set_rgb()` API expects.
-	r = (r * 100 + 127) / 255;
-	g = (g * 100 + 127) / 255;
-	b = (b * 100 + 127) / 255;
-
-	// This is also just a quick HACK here
-	ret = led_set_rgb(r, g, b);
+	ret = slot_manager_set_rgb_led_color(r, g, b);
 
 	return ret;
 }
