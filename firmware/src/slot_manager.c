@@ -34,6 +34,9 @@ int slot_manager_get_active_slot_idx(void)
 
 int slot_manager_set_color(uint32_t col)
 {
+	// On the FABI device this does not immediately update the LED color, so
+	// we also keep this behavior and only update the LED color when a slot is
+	// loaded.
 	active_slot.color = col;
 	return 0;
 }
