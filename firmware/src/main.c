@@ -4,7 +4,6 @@
 #include <zephyr/device.h>
 
 #include <zephyr/drivers/flash.h>
-#include <zephyr/drivers/led.h>
 #include <zephyr/drivers/retained_mem.h>
 
 #include <zephyr/shell/shell.h>
@@ -25,60 +24,9 @@
 
 LOG_MODULE_REGISTER(theadmouse, CONFIG_THEADMOUSE_LOG_LEVEL);
 
-int led_set_rgb(int r, int g, int b)
-{
-	static const struct led_dt_spec red = LED_DT_SPEC_GET(DT_ALIAS(red_pwm_led));
-	static const struct led_dt_spec green = LED_DT_SPEC_GET(DT_ALIAS(green_pwm_led));
-	static const struct led_dt_spec blue = LED_DT_SPEC_GET(DT_ALIAS(blue_pwm_led));
-
-	// TODO: Maybe don't error out, instead try best effort to set the LED colors
-	// even if some LEDs are not available.
-	if (!device_is_ready(red.dev)) {
-		LOG_ERR("Red LED device not ready");
-		return -ENODEV;
-	}
-	if (!device_is_ready(green.dev)) {
-		LOG_ERR("Green LED device not ready");
-		return -ENODEV;
-	}
-	if (!device_is_ready(blue.dev)) {
-		LOG_ERR("Blue LED device not ready");
-		return -ENODEV;
-	}
-
-	int ret;
-	ret = led_set_brightness_dt(&red, r);
-	if (ret) {
-		LOG_ERR("Seting red LED failed (%d)", ret);
-		return ret;
-	}
-
-	ret = led_set_brightness_dt(&green, g);
-	if (ret) {
-		LOG_ERR("Seting green LED failed (%d)", ret);
-		return ret;
-	}
-
-	ret = led_set_brightness_dt(&blue, b);
-	if (ret) {
-		LOG_ERR("Seting blue LED failed (%d)", ret);
-		return ret;
-	}
-
-	return 0;
-}
-
 int main(void)
 {
 	int ret;
-
-	// NOTE: It takes quite a while to arrive here, so consider
-	// turning on the green LED via some very early GPIO using
-	// `SYS_INIT()` with something like `PRE_KERNEL_1`.
-	ret = led_set_rgb(0, 10, 0);
-	if (ret < 0) {
-		LOG_ERR("Failed to set RGB LED");
-	}
 
 	LOG_INF("Tina was here ^_^");
 
