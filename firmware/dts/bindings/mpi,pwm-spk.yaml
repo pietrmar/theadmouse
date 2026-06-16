@@ -3,7 +3,7 @@
 
 description: PWM-driven speaker.
 
-compatible: "pwm-spk"
+compatible: "mpi,pwm-spk"
 
 include: base.yaml
 
