@@ -496,15 +496,26 @@ float motion_engine_get_deadzone(enum axis axis)
 
 static const struct device *const btn_dev = DEVICE_DT_GET(DT_CHOSEN(mpi_buttons));
 
-static void hid_mouse_thread(void *, void *, void *)
+K_SEM_DEFINE(hid_report_sem, 0, 1);
+static void hid_report_cb(struct k_timer *timer)
+{
+	k_sem_give(&hid_report_sem);
+}
+K_TIMER_DEFINE(hid_report_timer, hid_report_cb, NULL);
+
+#define HID_REPORT_INTERVAL K_MSEC(10)
+
+static void hid_report_thread(void *, void *, void *)
 {
 	// TODO: Reset all of these on mode change
 	float remainder_x = 0.0f;
 	float remainder_y = 0.0f;
 	bool alt_mode_hits[4] = { false };
 
+	k_timer_start(&hid_report_timer, HID_REPORT_INTERVAL, HID_REPORT_INTERVAL);
+
 	while (true) {
-		k_sleep(K_MSEC(10));
+		k_sem_take(&hid_report_sem, K_FOREVER);
 
 		k_spinlock_key_t key = k_spin_lock(&imu_accum_lock);
 		float raw_dx = imu_accum_x;
@@ -575,7 +586,7 @@ static void hid_mouse_thread(void *, void *, void *)
 		}
 	}
 }
-K_THREAD_DEFINE(hid_mouse_tid, 2048, hid_mouse_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(5), 0, 0);
+K_THREAD_DEFINE(hid_report_tid, 2048, hid_report_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(5), 0, 0);
 
 static void imu_monitor_cb(struct k_timer *timer)
 {
@@ -681,6 +692,7 @@ int motion_engine_suspend(void)
 {
 	LOG_INF("Suspending");
 
+	k_timer_stop(&hid_report_timer);
 	k_timer_stop(&imu_monitor_timer);
 
 	int ret = pm_device_action_run(dev_imu, PM_DEVICE_ACTION_SUSPEND);
@@ -711,6 +723,7 @@ int motion_engine_resume(void)
 	}
 
 	k_timer_start(&imu_monitor_timer, K_SECONDS(1), K_SECONDS(1));
+	k_timer_start(&hid_report_timer, HID_REPORT_INTERVAL, HID_REPORT_INTERVAL);
 
 	return 0;
 }
