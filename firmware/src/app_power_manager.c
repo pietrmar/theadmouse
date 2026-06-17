@@ -1,5 +1,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/logging/log_ctrl.h>
+#include <zephyr/pm/device.h>
 
 #include "app_power_manager.h"
 
@@ -21,6 +23,8 @@ static bool app_pm_target_idle = false;
 // `app_pm_actual_idle` accordingly.
 static bool app_pm_actual_idle = false;
 
+static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+
 // TODO: Currently the consumers are hardcoded here on suspend/resume, we probably should
 // implement something more nicer where consumers can register suspend/resume callbacks.
 static void app_pm_suspend_app_componenets(void)
@@ -35,12 +39,28 @@ static void app_pm_suspend_app_componenets(void)
 	if (ret < 0) {
 		LOG_ERR("Failed to suspend BLE: %d", ret);
 	}
+
+	// The UART peripheral actually consumes ~450 uA when it's not disabled
+	// so we for sure want to disable it in the idle mode.
+	LOG_INF("Suspending the UART");
+	log_thread_trigger();
+	k_msleep(100);
+
+	ret = pm_device_action_run(uart_dev, PM_DEVICE_ACTION_SUSPEND);
+	if (ret < 0) {
+		LOG_ERR("Failed to suspend the UART: %d", ret);
+	}
 }
 
 static void app_pm_resume_app_componenets(void)
 {
+	int ret = pm_device_action_run(uart_dev, PM_DEVICE_ACTION_RESUME);
+	if (ret < 0) {
+		LOG_ERR("Failed to resume the UART: %d", ret);
+	}
+
 	LOG_INF("Resuming app components");
-	int ret = motion_engine_resume();
+	ret = motion_engine_resume();
 	if (ret < 0) {
 		LOG_ERR("Failed to resume motion engine: %d", ret);
 	}
