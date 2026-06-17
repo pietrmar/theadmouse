@@ -69,9 +69,7 @@ int main(void)
 		LOG_ERR("App power-manager initialization failed");
 	}
 
-	while (true) {
-		k_msleep(1000);
-	}
+	k_sleep(K_FOREVER);
 
 	return 0;
 }
