@@ -17,6 +17,9 @@ struct slot_settings
 };
 
 int slot_manager_init(void);
+int slot_manager_suspend(void);
+int slot_manager_resume(void);
+
 int slot_manager_get_active_slot_idx(void);
 
 // TODO: Consider some nicer "iterator" API or so

@@ -25,7 +25,7 @@ LOG_MODULE_REGISTER(slot_manager, CONFIG_SLOT_MANAGER_LOG_LEVEL);
 static struct slot_settings active_slot;
 static int active_slot_index = -1;
 
-// NOTE: This is not thread save, but all slot operations, including getting the currently active
+// NOTE: This is not thread safe, but all slot operations, including getting the currently active
 // slot should happen from the AT command thread.
 int slot_manager_get_active_slot_idx(void)
 {
@@ -702,3 +702,24 @@ static void tone_player_thread(void *p1, void *p2, void *p3)
 	}
 }
 K_THREAD_DEFINE(tone_player_tid, 512, tone_player_thread, NULL, NULL, NULL, K_PRIO_PREEMPT(10), 0, 0);
+
+// TODO: How to handle receiving slot management commands when we are suspended?
+int slot_manager_suspend(void)
+{
+	LOG_INF("Suspending");
+	slot_manager_set_rgb_led_color(0, 0, 0);
+	return 0;
+}
+
+int slot_manager_resume(void)
+{
+	LOG_INF("Resuming");
+
+	// TODO: This is also not thread safe, we might have AT commands coming in
+	int r = (active_slot.color >> 16) & 0xFF;
+	int g = (active_slot.color >>  8) & 0xFF;
+	int b = (active_slot.color >>  0) & 0xFF;
+	int ret = slot_manager_set_rgb_led_color(r, g, b);
+
+	return ret;
+}
