@@ -5,6 +5,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 
+#include <zephyr/drivers/charger.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/retained_mem.h>
 
@@ -219,6 +220,66 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	SHELL_SUBCMD_SET_END
 );
 SHELL_CMD_REGISTER(slot_manager, &slot_manager_cmds, "Slot manager commands", NULL);
+
+#if defined(CONFIG_CHARGER)
+static const char *charger_status_to_str(enum charger_status status)
+{
+	switch(status) {
+		case CHARGER_STATUS_CHARGING:
+			return "charging";
+		case CHARGER_STATUS_DISCHARGING:
+			return "discharging";
+		case CHARGER_STATUS_NOT_CHARGING:
+			return "not charging";
+		case CHARGER_STATUS_FULL:
+			return "full";
+		case CHARGER_STATUS_UNKNOWN:
+		default:
+			return "unknown";
+	}
+}
+
+static const struct device *dev_charger = DEVICE_DT_GET(DT_CHOSEN(mpi_charger));
+
+static int cmd_charger_status_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	int ret;
+	union charger_propval val;
+
+	ret = charger_get_prop(dev_charger, CHARGER_PROP_ONLINE, &val);
+	if (ret < 0) {
+		return ret;
+	}
+	shell_print(shell, "Online  : %s", val.online != CHARGER_ONLINE_OFFLINE ? "yes" : "no");
+
+	ret = charger_get_prop(dev_charger, CHARGER_PROP_STATUS, &val);
+	if (ret < 0) {
+		return ret;
+	}
+	shell_print(shell, "State   : %s", charger_status_to_str(val.status));
+
+	ret = charger_get_prop(dev_charger, CHARGER_PROP_CONSTANT_CHARGE_VOLTAGE_UV, &val);
+	if (ret < 0) {
+		return ret;
+	}
+	shell_print(shell, "Voltage : %u mV", val.const_charge_voltage_uv / 1000);
+
+	ret = charger_get_prop(dev_charger, CHARGER_PROP_CONSTANT_CHARGE_CURRENT_UA, &val);
+	if (ret < 0) {
+		return ret;
+	}
+	shell_print(shell, "Current : %u mA", val.const_charge_current_ua / 1000);
+
+	return 0;
+}
+
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	charger_cmds,
+	SHELL_CMD(status, NULL, "Show the charger status", cmd_charger_status_handler),
+	SHELL_SUBCMD_SET_END
+);
+SHELL_CMD_REGISTER(charger, &charger_cmds, "Charger commands", NULL);
+#endif
 
 #if 0
 // TODO: We should not erase the whole flash now as we have LittleFS running on
