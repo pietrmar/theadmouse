@@ -81,6 +81,7 @@ endmenu
 
 rsource "drivers/sensor/st/lsm6dsl/Kconfig"
 rsource "drivers/sensor/st/lis2mdl/Kconfig"
+rsource "drivers/charger/Kconfig"
 
 endmenu
 

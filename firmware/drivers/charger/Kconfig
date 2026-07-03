@@ -1,0 +1,16 @@
+# Copyright 2024 Google LLC
+#
+# SPDX-License-Identifier: Apache-2.0
+
+if CHARGER
+
+config CHARGER_BQ2518X_CUSTOM
+	bool "BQ2518x Battery Charger (customized)"
+	default y
+	depends on DT_HAS_TI_BQ25180_ENABLED || DT_HAS_TI_BQ25186_ENABLED || \
+		DT_HAS_TI_BQ25188_ENABLED
+	select I2C
+	help
+	  Enable BQ2518x battery charger driver.
+
+endif # CHARGER

@@ -60,3 +60,8 @@ if(CONFIG_LIS2MDL_CUSTOM)
 		target_sources(app PRIVATE drivers/sensor/st/lis2mdl/lis2mdl_trigger.c)
 	endif()
 endif()
+
+if(CONFIG_CHARGER_BQ2518X_CUSTOM)
+	target_include_directories(app PRIVATE ${ZEPHYR_BASE}/drivers/charger)
+	target_sources(app PRIVATE drivers/charger/charger_bq2518x.c)
+endif()
