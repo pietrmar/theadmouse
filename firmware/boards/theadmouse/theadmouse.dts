@@ -20,6 +20,8 @@
 		zephyr,console = &uart0;
 		zephyr,shell-uart = &uart0;
 
+		// TODO: Move these to a `zephyr,user` node instead or use device-tree
+		// bindings for all the managers/services that need these devices.
 		mpi,buttons = &buttons;
 		mpi,cmd-uart = &uart_cmd;
 		mpi,telemetry-uart = &uart_telemetry;
@@ -29,6 +31,8 @@
 
 		mpi,spk-pwm = &pwm_spk;
 		mpi,rgb-led-pwm = &pwm_rgb_led;
+
+		mpi,charger = &bq25186;
 	};
 
 	buttons: buttons {
@@ -80,6 +84,21 @@
 
 &gpiote {
 	status = "okay";
+};
+
+&i2c1 {
+	status = "okay";
+	pinctrl-0 = <&i2c1_default>;
+	pinctrl-1 = <&i2c1_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	bq25186: bq25186@6a {
+		compatible = "ti,bq25186";
+		reg = <0x6a>;
+
+		constant-charge-current-max-microamp = <250000>;
+		battery-discharge-current-limit-milliamp = <500>;
+	};
 };
 
 &pwm0 {
