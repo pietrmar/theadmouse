@@ -11,7 +11,11 @@
 
 LOG_MODULE_REGISTER(app_power_manager, CONFIG_APP_POWER_MANAGER_LOG_LEVEL);
 
+#if 0
 static const k_timeout_t app_pm_idle_timeout = K_SECONDS(30);
+#else
+static const k_timeout_t app_pm_idle_timeout = K_FOREVER;
+#endif
 
 static struct k_spinlock app_pm_spinlock;
 static uint32_t app_pm_lock_mask = 0;
