@@ -71,6 +71,10 @@ enum bq2518x_device_id {
 #define BQ2518X_SHIP_RST_EN_RST_SHIP_MSK         GENMASK(6, 5)
 #define BQ2518X_SHIP_RST_EN_RST_SHIP_ADAPTER     0x20
 #define BQ2518X_SHIP_RST_EN_RST_SHIP_BUTTON      0x40
+#define BQ2518X_SHIP_RST_PB_LPRESS_ACT_MSK       GENMASK(4, 3)
+#define BQ2518X_SHIP_RST_PB_LPRESS_ACT_SHIP      BIT(4)
+#define BQ2518X_SHIP_RST_EN_PUSH_EN              BIT(1)
+#define BQ2518X_SHIP_RST_EN_PUSH_DIS             0x00
 
 /* Charging current limits */
 #define BQ2518X_CURRENT_MIN_MA 5
@@ -86,6 +90,7 @@ struct bq2518x_config {
 	uint32_t max_voltage_microvolt;
 	enum bq2518x_device_id device_id;
 	uint8_t reg_ic_ctrl;
+	uint8_t reg_ship_rst;
 	uint8_t reg_charge_control1;
 	uint8_t reg_sys_regulation;
 };
@@ -358,6 +363,12 @@ static int bq2518x_init(const struct device *dev)
 		return ret;
 	}
 
+	val = BQ2518X_SHIP_RST_PB_LPRESS_ACT_SHIP | cfg->reg_ship_rst;
+	ret = i2c_reg_write_byte_dt(&cfg->i2c, BQ2518X_SHIP_RST, val);
+	if (ret < 0) {
+		return ret;
+	}
+
 	/* Setup VSYS regulation */
 	ret = i2c_reg_write_byte_dt(&cfg->i2c, BQ2518X_SYS_REG, cfg->reg_sys_regulation);
 	if (ret < 0) {
@@ -404,6 +415,10 @@ static int bq2518x_init(const struct device *dev)
 			(DT_INST_PROP_OR(inst, ntc_charger_control_disable, 0)                     \
 				 ? BQ2518X_IC_CTRL_TS_AUTO_DIS                                     \
 				 : BQ2518X_IC_CTRL_TS_AUTO_EN),                                    \
+		.reg_ship_rst =                                                                    \
+			(DT_INST_PROP_OR(inst, push_button_disable, 0)                             \
+			 	 ? BQ2518X_SHIP_RST_EN_PUSH_DIS                                    \
+				 : BQ2518X_SHIP_RST_EN_PUSH_EN),                                   \
 		.reg_charge_control1 =                                                             \
 			(DT_INST_ENUM_IDX(inst, battery_discharge_current_limit_milliamp)          \
 			 << BQ2518X_CHARGE_CTRL1_DISCHARGE_OFFSET) |                               \

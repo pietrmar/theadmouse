@@ -90,3 +90,9 @@ properties:
     description: |
       Disable thermistor control over the charger. Alerts are still generated.
       Clears the TS_EN bit in the control register.
+
+  push-button-disable:
+      type: boolean
+      description: |
+        Disable the push button and reset functionality when in active battery.
+        Clears the EN_PUSH bit in the SHIP_RST register.
