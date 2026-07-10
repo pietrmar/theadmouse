@@ -98,6 +98,14 @@
 
 		constant-charge-current-max-microamp = <250000>;
 		battery-discharge-current-limit-milliamp = <500>;
+
+		// We do not have an NTC connected so disable this.
+		ntc-charger-control-disable;
+
+		// Also disable the push button functionality as we do not
+		// have a push button connected. This will also save a little
+		// bit of power.
+		push-button-disable;
 	};
 };
 
