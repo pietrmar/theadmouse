@@ -91,6 +91,15 @@ static void imu_thread(void *, void *, void *)
 
 	const uint32_t log_sample_reset_val = IMU_SAMPLING_FREQUENCY / 4;
 	uint32_t log_sample_counter = log_sample_reset_val;
+
+	uint32_t mag_read_counter = MAG_DECIM_FACTOR;
+	const uint32_t mag_log_reset_val = 40;
+	uint32_t mag_log_counter = mag_log_reset_val;
+
+	float gx_p = 0.0f;
+	float gy_p = 0.0f;
+	float gz_p = 0.0f;
+
 	bool is_still = true;
 	while (true) {
 		k_sem_take(&imu_trigger_sem, K_FOREVER);
@@ -121,13 +130,77 @@ static void imu_thread(void *, void *, void *)
 		float gy = sensor_value_to_float(&gyro_val[1]);
 		float gz = sensor_value_to_float(&gyro_val[2]);
 
+		float dgx = fabsf(gx - gx_p);
+		float dgy = fabsf(gy - gy_p);
+		float dgz = fabsf(gz - gz_p);
+
+		gx_p = gx;
+		gy_p = gy;
+		gz_p = gz;
+
+#if 0
+		mag_read_counter -= 1;
+		if (mag_read_counter == 0) {
+			mag_read_counter = MAG_DECIM_FACTOR;
+
+			ret = sensor_sample_fetch_chan(dev_mag, SENSOR_CHAN_MAGN_XYZ);
+			if (ret < 0) {
+				LOG_ERR("Failed to fetch magnetometer sample: %d", ret);
+			}
+
+			struct sensor_value mag_val[3];
+			sensor_channel_get(dev_mag, SENSOR_CHAN_MAGN_XYZ, mag_val);	// In Gauss
+
+			float mx = sensor_value_to_float(&mag_val[0]);
+			float my = sensor_value_to_float(&mag_val[1]);
+			float mz = sensor_value_to_float(&mag_val[2]);
+
+			static float mag_min_x = 9999.0f; static float mag_max_x = -9999.0f;
+			static float mag_min_y = 9999.0f; static float mag_max_y = -9999.0f;
+			static float mag_min_z = 9999.0f; static float mag_max_z = -9999.0f;
+
+			if (mx < mag_min_x) mag_min_x = mx;
+			if (mx > mag_max_x) mag_max_x = mx;
+
+			if (my < mag_min_y) mag_min_y = my;
+			if (my > mag_max_y) mag_max_y = my;
+
+			if (mz < mag_min_z) mag_min_z = mz;
+			if (mz > mag_max_z) mag_max_z = mz;
+
+			float offset_x = (mag_max_x - mag_min_x) / 2.0f;
+			float offset_y = (mag_max_y - mag_min_y) / 2.0f;
+			float offset_z = (mag_max_z - mag_min_z) / 2.0f;
+
+			// Convert to uT
+			float cal_mx = (mx - offset_x) * 100.0f;
+			float cal_my = (my - offset_y) * 100.0f;
+			float cal_mz = (mz - offset_z) * 100.0f;
+
+			float mag_norm = sqrtf(cal_mx*cal_mx + cal_my*cal_my + cal_mz*cal_mz);
+
+			mag_log_counter -= 1;
+			if (mag_log_counter == 0) {
+				mag_log_counter = mag_log_reset_val;
+				LOG_INF("mag: [%f, %f, %f]", mx, my, mz);
+				LOG_INF("min: [%f, %f, %f]", mag_min_x, mag_min_y, mag_min_z);
+				LOG_INF("max: [%f, %f, %f]", mag_max_x, mag_max_y, mag_max_z);
+				LOG_INF("off: [%f, %f, %f]", offset_x, offset_y, offset_z);
+				LOG_INF("cal: [%f, %f, %f]", cal_mx, cal_my, cal_mz);
+				LOG_INF("|mag|: %f", mag_norm);
+			}
+		}
+#endif
+
 		MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
 
 		float dq3 = q3 * q_p[0] - q0 * q_p[3] - q1 * q_p[2] + q2 * q_p[1];
 		float dq2 = q2 * q_p[0] - q0 * q_p[2] + q1 * q_p[3] - q3 * q_p[1];
 
-		float raw_dx = 2.0f * dq3;
-		float raw_dy = 2.0f * dq2;
+		// float raw_dx = 2.0f * dq3;
+		// float raw_dy = 2.0f * dq2;
+		float raw_dx = 0.0f;
+		float raw_dy = 0.0f;
 
 		q_p[0] = q0;
 		q_p[1] = q1;
@@ -147,9 +220,14 @@ static void imu_thread(void *, void *, void *)
 
 		log_sample_counter -= 1;
 		if (log_sample_counter == 0) {
+			log_sample_counter = log_sample_reset_val;
+			LOG_DBG("gyro: [%f, %f, %f]", gx, gy, gz);
+			LOG_DBG("gyro': [%f, %f, %f]", dgx, dgy, dgz);
+			//telemetry_uart_printf("%f, %f, %f\r\n", (double)dgx, (double)dgy, (double)dgz);
+
+
 			// LOG_DBG("accel_delta: %f", accel_delta);
 			// LOG_DBG("loop time: %lld us", k_ticks_to_us_near64(t_end - t_start));
-			log_sample_counter = log_sample_reset_val;
 		}
 	}
 }
