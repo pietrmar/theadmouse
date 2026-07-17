@@ -194,6 +194,7 @@ static void imu_thread(void *, void *, void *)
 
 		MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
 
+		// TODO: Change this to calculate dq = conj(q_prev) * q_curr
 		float dq3 = q3 * q_p[0] - q0 * q_p[3] - q1 * q_p[2] + q2 * q_p[1];
 		float dq2 = q2 * q_p[0] - q0 * q_p[2] + q1 * q_p[3] - q3 * q_p[1];
 
