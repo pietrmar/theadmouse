@@ -81,6 +81,8 @@ static void lsm6dsl_gpio_callback(const struct device *dev,
 
 	ARG_UNUSED(pins);
 
+	drv_data->trigger_cycles = k_cycle_get_32();
+
 	handle_irq(drv_data->dev);
 }
 

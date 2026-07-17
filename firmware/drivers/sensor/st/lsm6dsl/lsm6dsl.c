@@ -718,6 +718,12 @@ static int lsm6dsl_channel_get(const struct device *dev,
 		lps22hb_temp_convert(val, data->sample_temp);
 		break;
 #endif
+#if CONFIG_LSM6DSL_TRIGGER
+	case SENSOR_CHAN_LSM6DSL_TRIGGER_CYCLES:
+		val->val1 = (int32_t)(data->trigger_cycles >> 16);
+		val->val2 = (int32_t)(data->trigger_cycles & 0xFFFF);
+		break;
+#endif
 	default:
 		return -ENOTSUP;
 	}

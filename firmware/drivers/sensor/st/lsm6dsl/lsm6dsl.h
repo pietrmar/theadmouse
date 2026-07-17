@@ -17,6 +17,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 
+enum sensor_channel_lsm6dsl {
+	SENSOR_CHAN_LSM6DSL_TRIGGER_CYCLES = SENSOR_CHAN_PRIV_START,
+};
+
 #if DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
 #include <zephyr/drivers/spi.h>
 #endif /* DT_ANY_INST_ON_BUS_STATUS_OKAY(spi) */
@@ -680,6 +684,7 @@ struct lsm6dsl_data {
 #elif defined(CONFIG_LSM6DSL_TRIGGER_GLOBAL_THREAD)
 	struct k_work work;
 #endif
+	uint32_t trigger_cycles;
 
 #endif /* CONFIG_LSM6DSL_TRIGGER */
 };
