@@ -145,9 +145,14 @@ int lsm6dsl_init_interrupt(const struct device *dev)
 	}
 
 	/* enable data-ready interrupt */
+	// NOTE: Only enable the gyro data ready interrupt, the accelerometer will be
+	// synchronized to it, from AN5040:
+	// > When both the accelerometer and gyroscope are on, the accelerometer is
+	// > synchronized with the gyroscope, and the data rates of the two sensors
+	// > are integer multiples of each other.
 	if (drv_data->hw_tf->update_reg(dev,
 			       LSM6DSL_REG_INT1_CTRL,
-			       LSM6DSL_MASK_INT1_CTRL_DRDY_XL |
+			       /* LSM6DSL_MASK_INT1_CTRL_DRDY_XL | */
 			       LSM6DSL_MASK_INT1_CTRL_DRDY_G,
 			       BIT(LSM6DSL_SHIFT_INT1_CTRL_DRDY_XL) |
 			       BIT(LSM6DSL_SHIFT_INT1_CTRL_DRDY_G)) < 0) {
