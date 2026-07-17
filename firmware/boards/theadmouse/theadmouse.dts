@@ -5,6 +5,9 @@
  */
 
 /dts-v1/;
+
+#define NRF_DEFAULT_IRQ_PRIORITY 5
+
 #include <nordic/nrf52840_qiaa.dtsi>
 #include "theadmouse_partition.dtsi"
 #include "theadmouse-pinctrl.dtsi"
@@ -84,6 +87,8 @@
 
 &gpiote {
 	status = "okay";
+	// Increase priority from 5 to 2
+	interrupts = <6 2>;
 };
 
 &i2c1 {
